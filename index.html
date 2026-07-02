@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças Domésticas Pro - Royal Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #f4f6fa;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            
+            /* Identidade Azul Royal */
+            --royal-blue: #4169e1;
+            --royal-dark: #1e3a8a;
+            --royal-light: #eff6ff;
+            
+            --danger: #dc2626;
+            --danger-light: #fef2f2;
+            --success: #059669;
+            --success-light: #ecfdf5;
+
+            /* Cores Personalizadas para as Empresas */
+            --empresa-azul: #e0f2fe;
+            --empresa-rosa: #fce7f3;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 1.5rem 1rem; }
+        .container { max-width: 1280px; margin: 0 auto; }
+        
+        header { margin-bottom: 1.5rem; border-left: 5px solid var(--royal-blue); padding-left: 0.8rem; display: flex; align-items: center; }
+        h1 { font-size: 1.5rem; font-weight: 800; color: var(--royal-dark); letter-spacing: -0.03em; }
+
+        /* Barra de Backup Superior */
+        .backup-bar { display: flex; gap: 0.5rem; align-items: center; background: #e2e8f0; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #cbd5e1; }
+        .backup-title { font-size: 0.78rem; font-weight: 700; color: var(--royal-dark); text-transform: uppercase; margin-right: auto; }
+        .btn-backup { background: #ffffff; border: 1px solid var(--border-color); padding: 0.35rem 0.8rem; font-size: 0.75rem; font-weight: 700; color: var(--text-main); border-radius: 4px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.3rem; }
+        .btn-backup:hover { background: var(--royal-light); border-color: var(--royal-blue); color: var(--royal-blue); }
+        .btn-backup.import { background: var(--royal-blue); color: white; border: none; }
+        .btn-backup.import:hover { background: var(--royal-dark); color: white; }
+
+        /* Abas Estilo Navegação Premium */
+        .tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 1.5rem; background: var(--royal-dark); padding: 0.4rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2); }
+        .tab-btn { background: none; border: none; padding: 0.5rem 1.2rem; font-size: 0.85rem; font-weight: 600; color: #93c5fd; cursor: pointer; border-radius: 6px; transition: all 0.3s ease; }
+        .tab-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.1); }
+        .tab-btn.active { color: var(--royal-dark); background-color: var(--card-bg); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+        
+        /* Cards de Conteúdo */
+        .tab-content { display: none; background: var(--card-bg); padding: 1.25rem; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid rgba(203, 213, 225, 0.6); }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* CARD DE DESTAQUE DE METAS (BADGE) */
+        .badge-meta-container { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.9rem; font-weight: 700; margin-left: auto; border: 1px solid transparent; transition: all 0.3s ease; }
+        .badge-meta-blue { background-color: var(--royal-light); border-color: #bfdbfe; color: var(--royal-dark); }
+        .badge-meta-red { background-color: var(--danger-light); border-color: #fca5a5; color: var(--danger); }
+        .badge-meta-input { width: 75px; padding: 0.2rem 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; font-weight: 700; text-align: center; color: var(--text-main); }
+
+        /* Tables */
+        .table-container { overflow-x: auto; margin-bottom: 1rem; border: 1px solid var(--royal-dark); border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; background: var(--card-bg); }
+        th, td { padding: 0.45rem 0.4rem; text-align: center !important; vertical-align: middle !important; border-bottom: 1px solid var(--border-color); border-right: 1px solid #e2e8f0; }
+        th:last-child, td:last-child { border-right: none; }
+        
+        th { background-color: var(--royal-dark); font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; padding: 0.4rem 0.3rem; position: relative; }
+        
+        th.sub-header-day { background-color: #2e4ea6; font-size: 0.68rem; font-weight: 600; color: #dbeafe; padding: 0.25rem; border-top: 1px solid rgba(255, 255, 255, 0.15); }
+        
+        .text-left { text-align: left !important; font-weight: 700; background-color: var(--royal-light); width: 140px; color: var(--royal-dark); padding-left: 0.8rem; }
+        
+        /* Autoajuste de Largura para aba Receitas */
+        .receitas-auto-width { text-align: left !important; font-weight: 700; background-color: var(--royal-light); color: var(--royal-dark); padding: 0.5rem 1rem !important; width: 220px !important; white-space: nowrap; }
+        .td-empresa-container { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+        .btn-color-picker { border: 1px solid var(--border-color); border-radius: 4px; width: 20px; height: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; background: #fff; transition: transform 0.1s; }
+        .btn-color-picker:hover { transform: scale(1.1); }
+
+        /* Coluna de valor configurada para até 8 decimais largos */
+        .receitas-valores-width { width: 110px !important; min-width: 110px !important; }
+        .cell-input-receitas { width: 100%; border: 1px solid transparent; background: transparent; text-align: center; font-size: 0.82rem; padding: 2px; border-radius: 4px; font-weight: 600; color: var(--text-main); }
+        .cell-input-receitas:hover { background: #f1f5f9; border-color: var(--border-color); }
+        .cell-input-receitas:focus { border-color: var(--royal-blue); background: #fff; outline: none; font-weight: 700; }
+
+        .resumo-title-column { font-weight: 800; background-color: var(--royal-light); text-align: center !important; width: 155px; color: var(--royal-dark); padding: 0.45rem; }
+        
+        th.excel-header { background-color: var(--royal-dark) !important; color: #ffffff !important; border-bottom: 2px solid var(--royal-blue); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        td.excel-cell { background-color: #ffffff; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); }
+        td.excel-cell-diff { background-color: var(--royal-light) !important; font-weight: bold; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); color: var(--royal-dark); }
+        
+        .excel-input { border: 1px solid var(--border-color); background: #fff; text-align: center; width: 80px; font-size: 0.82rem; font-weight: 600; color: #000; padding: 2px; border-radius: 4px; }
+
+        .resumo-section-title { font-size: 0.95rem; font-weight: 800; color: var(--royal-dark); margin-bottom: 0.4rem; margin-top: 1rem; display: flex; align-items: center; gap: 0.4rem; }
+        .resumo-table-space { margin-bottom: 1.5rem; }
+
+        .excel-cell-direct { width: 85px; border: 1px solid transparent; background: transparent; text-align: center; font-size: 0.82rem; font-weight: 600; color: var(--text-main); padding: 4px 2px; border-radius: 4px; transition: all 0.15s; }
+        .excel-cell-direct:hover { background: #f1f5f9; border-color: var(--border-color); }
+        .excel-cell-direct:focus { background: #ffffff; border-color: var(--royal-blue); outline: none; font-weight: 700; color: #000000; box-shadow: 0 0 4px rgba(65, 105, 225, 0.3); }
+
+        .controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.2rem; align-items: center; background: #f8fafc; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        .controls label { font-size: 0.8rem; font-weight: 700; color: var(--royal-dark); }
+        select, input[type="text"], input[type="number"] { padding: 0.4rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.82rem; background: #fff; color: var(--text-main); font-weight: 500; transition: all 0.2s; }
+        select:focus, input:focus { border-color: var(--royal-blue); outline: none; box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.15); }
+        button.btn-add { background: var(--royal-blue); color: white; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        button.btn-add:hover { background: #2b4eb8; }
+        
+        .btn-manage-cat { background: #ffffff; border: 1px solid var(--royal-blue); color: var(--royal-blue); font-weight: 700; font-size: 0.78rem; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .btn-manage-cat:hover { background: var(--royal-light); }
+        .btn-manage-cat.remove { border-color: var(--danger); color: var(--danger); }
+        .btn-manage-cat.remove:hover { background: var(--danger-light); }
+
+        .status-danger { background-color: var(--danger-light) !important; color: var(--danger); font-weight: 700; }
+        .status-success { background-color: var(--success-light) !important; color: var(--success); font-weight: 700; }
+        .total-row { background-color: #f8fafc; font-weight: 800; border-top: 2px solid var(--royal-dark); }
+        
+        th.header-day-automatic { font-size: 0.78rem; color: #ffffff; font-weight: 700; width: 85px; padding: 0.4rem 2px; }
+        
+        .category-edit-input { border: none; background: transparent; font-weight: 700; color: var(--royal-dark); font-size: 0.82rem; width: 100%; padding: 2px; }
+        .category-edit-input:hover { background: rgba(65, 105, 225, 0.1); }
+        .category-edit-input:focus { background: #fff; outline: 1px solid var(--royal-blue); }
+
+        .excel-danger-text { color: var(--danger) !important; font-weight: 700; }
+        .excel-success-text { color: var(--royal-blue) !important; font-weight: 700; }
+
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 1.5rem; margin-top: 0.5rem; }
+        .chart-box { background: #fff; padding: 1rem; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        
+        .dash-table-container { max-height: 160px; overflow-y: auto; margin-top: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; }
+        .dash-table th { position: sticky; top: 0; background: var(--royal-dark); z-index: 1; padding: 0.4rem; }
+        .dash-table td { padding: 0.35rem; }
+
+        .meta-table-wrapper { max-width: 600px; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .input-filtro { background: #ffffff; border: 1px solid var(--royal-blue); padding: 0.35rem 0.6rem; font-size: 0.82rem; border-radius: 6px; width: 160px; font-weight: 600; }
+
+        .btn-filter-excel { background: transparent; border: none; color: #bfdbfe; cursor: pointer; font-size: 0.65rem; margin-left: 4px; vertical-align: middle; transition: color 0.2s; }
+        .btn-filter-excel:hover { color: #ffffff; }
+        .btn-filter-excel.active { color: #58ffc6; }
+        .div-filtro-popup { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid var(--royal-blue); padding: 8px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; min-width: 160px; text-align: left; }
+        .div-filtro-popup input { width: 100%; padding: 4px 6px; font-size: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 6px; color: #000; }
+        .div-filtro-popup button { width: 100%; padding: 4px; font-size: 0.72rem; background: var(--royal-blue); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 4px; }
+        .div-filtro-popup button:hover { background: var(--royal-dark); }
+        .sort-option { display: block; width: 100%; padding: 4px 6px; font-size: 0.72rem; background: none; border: none; text-align: left; cursor: pointer; color: var(--text-main); font-weight: 600; border-radius: 4px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 4px; }
+        .sort-option:hover { background: var(--royal-light); color: var(--royal-dark); }
+
+        .flex-break-row { display: flex; width: 100%; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+
+        /* ===== TELA DE LOGIN ===== */
+        #login-screen { display: flex; min-height: 100vh; align-items: center; justify-content: center; background: var(--royal-dark); }
+        #login-card { background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); width: 100%; max-width: 340px; }
+        #login-card h1 { font-size: 1.2rem; color: var(--royal-dark); margin-bottom: 1.2rem; text-align: center; }
+        #login-card input { width: 100%; padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; }
+        #login-card button { width: 100%; padding: 0.65rem; background: var(--royal-blue); color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+        #login-card button:hover { background: var(--royal-dark); }
+        #login-card button:disabled { opacity: 0.6; cursor: default; }
+        #login-erro { color: var(--danger); font-size: 0.8rem; margin-top: 0.6rem; text-align: center; min-height: 1em; }
+        #btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; cursor: pointer; margin-left: 0.6rem; }
+        #btn-logout:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    </style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div id="login-card">
+        <h1>Finanças Domésticas — Login</h1>
+        <input type="email" id="login-email" placeholder="e-mail" autocomplete="username">
+        <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button id="login-btn" onclick="fazerLogin()">Entrar</button>
+        <div id="login-erro"></div>
+    </div>
+</div>
+
+<div class="container" id="app-container" style="display:none">
+    <header>
+        <h1>Controle Financeiro Doméstico</h1>
+        <button id="btn-logout" onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'aba-relatorios')">Dashboard</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-lancamentos-cartao')">Lançamentos Cartão</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-lancamentos-cash')">Lançamentos Cash</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-resumo')">Resumo</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-prestacoes')">Prestações</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-outros')">Outros (Cartão)</button>
+        <button class="tab-btn" onclick="switchTab(event, 'aba-receitas')">Receitas</button>
+    </div>
+
+    <!-- 1. DASHBOARD -->
+    <div id="aba-relatorios" class="tab-content active">
+        <div class="backup-bar">
+            <div class="backup-title">🛡️ Central de Segurança de Dados</div>
+            <button class="btn-backup" onclick="exportarBackup()">💾 Exportar Backup</button>
+            <button class="btn-backup import" onclick="document.getElementById('input-import').click()">📂 Importar Backup</button>
+            <input type="file" id="input-import" style="display: none;" accept=".json" onchange="importarBackup(event)">
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-box">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Balanço Mensal: Receitas x Despesas Totais</h3>
+                <canvas id="chartBalanco"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Distribuição de Gastos Acumulados (Cartão + Cash)</h3>
+                <canvas id="chartGastos"></canvas>
+            </div>
+            <div class="chart-box" style="grid-column: span 2;">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.25rem;">Linha do Tempo das Prestações</h3>
+                <canvas id="chartPrestacoes"></canvas>
+                <div class="dash-table-container">
+                    <table class="dash-table">
+                        <thead>
+                            <tr><th>Mês / Ano</th><th>Valor da Prestação Mensal</th></tr>
+                        </thead>
+                        <tbody id="body-dash-tabela-prestacoes"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. LANÇAMENTOS CARTÃO -->
+    <div id="aba-lancamentos-cartao" class="tab-content">
+        <div class="controls">
+            <label>Mês de Referência:</label>
+            <select id="select-mes-cartao" onchange="renderLancamentos('cartao')"></select>
+            <select id="select-ano-cartao" onchange="renderLancamentos('cartao')"></select>
+
+            <label>Semana:</label>
+            <select id="select-semana-cartao" onchange="renderLancamentos('cartao')">
+                <option value="S1" selected>Semana 1</option>
+                <option value="S2">Semana 2</option>
+                <option value="S3">Semana 3</option>
+                <option value="S4">Semana 4</option>
+                <option value="S5">Semana 5</option>
+            </select>
+
+            <label>Dias Exibidos:</label>
+            <input type="number" id="qtde-dias-cartao" value="7" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cartao')">
+            
+            <input type="text" id="filtro-categoria-cartao" placeholder="🔍 Filtrar Categoria..." class="input-filtro" oninput="renderLancamentos('cartao')">
+
+            <div id="badge-cartao" class="badge-meta-container badge-meta-blue">
+                <span>TOTAL SEMANA: R$ <span id="total-val-cartao">0,0</span></span>
+                <span style="font-size: 0.75rem; font-weight:500; margin-left:0.5rem;">META MÊS:</span>
+                <input type="text" id="meta-val-cartao" class="badge-meta-input" value="1000,0" onchange="atualizarMetaLocal('cartao', this.value)">
+            </div>
+
+            <div style="margin-left: 1rem; display: flex; gap: 0.5rem;">
+                <button class="btn-manage-cat" onclick="adicionarNovaCategoriaPrompt('cartao')">➕ Cat.</button>
+                <button class="btn-manage-cat remove" onclick="removerCategoriaPrompt('cartao')">❌ Remover</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead id="thead-cartao">
+                    <tr id="header-dias-cartao"></tr>
+                    <tr id="header-semana-cartao"></tr>
+                </thead>
+                <tbody id="body-lancamentos-cartao"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. LANÇAMENTOS CASH -->
+    <div id="aba-lancamentos-cash" class="tab-content">
+        <div class="controls">
+            <label>Mês de Referência:</label>
+            <select id="select-mes-cash" onchange="renderLancamentos('cash')"></select>
+            <select id="select-ano-cash" onchange="renderLancamentos('cash')"></select>
+
+            <label>Semana:</label>
+            <select id="select-semana-cash" onchange="renderLancamentos('cash')">
+                <option value="S1" selected>Semana 1</option>
+                <option value="S2">Semana 2</option>
+                <option value="S3">Semana 3</option>
+                <option value="S4">Semana 4</option>
+                <option value="S5">Semana 5</option>
+            </select>
+
+            <label>Dias Exibidos:</label>
+            <input type="number" id="qtde-dias-cash" value="7" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cash')">
+            
+            <input type="text" id="filtro-categoria-cash" placeholder="🔍 Filtrar Categoria..." class="input-filtro" oninput="renderLancamentos('cash')">
+
+            <div id="badge-cash" class="badge-meta-container badge-meta-blue">
+                <span>TOTAL SEMANA: R$ <span id="total-val-cash">0,0</span></span>
+                <span style="font-size: 0.75rem; font-weight:500; margin-left:0.5rem;">META MÊS:</span>
+                <input type="text" id="meta-val-cash" class="badge-meta-input" value="1000,0" onchange="atualizarMetaLocal('cash', this.value)">
+            </div>
+
+            <div style="margin-left: 1rem; display: flex; gap: 0.5rem;">
+                <button class="btn-manage-cat" onclick="adicionarNovaCategoriaPrompt('cash')">➕ Cat.</button>
+                <button class="btn-manage-cat remove" onclick="removerCategoriaPrompt('cash')">❌ Remover</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead id="thead-cash">
+                    <tr id="header-dias-cash"></tr>
+                    <tr id="header-semana-cash"></tr>
+                </thead>
+                <tbody id="body-lancamentos-cash"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. RESUMO -->
+    <div id="aba-resumo" class="tab-content">
+        <div class="controls" style="background: var(--royal-light); border-color: #bfdbfe;">
+            <label>Mês de Análise:</label>
+            <select id="select-mes-resumo" onchange="renderResumo()" style="border-color: var(--royal-blue); font-weight: bold;"></select>
+        </div>
+
+        <div class="resumo-section-title">⚡ Despesas Mensais Consolidadas por Mês Comercial</div>
+        <div class="table-container resumo-table-space">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fluxo / Período</th>
+                        <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
+                        <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
+                    </tr>
+                </thead>
+                <tbody id="body-resumo-semanas"></tbody>
+            </table>
+        </div>
+
+        <div class="resumo-section-title">📊 Fluxo Consolidado Mensal</div>
+        <div class="table-container resumo-table-space">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fluxo Geral</th>
+                        <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
+                        <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
+                    </tr>
+                </thead>
+                <tbody id="body-resumo-fluxo"></tbody>
+            </table>
+        </div>
+
+        <div class="resumo-section-title">🏆 Resultado Geral (Saldo Líquido)</div>
+        <div class="table-container resumo-table-space">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resultado</th>
+                        <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
+                        <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
+                    </tr>
+                </thead>
+                <tbody id="body-resumo-saldo"></tbody>
+            </table>
+        </div>
+
+        <div class="resumo-section-title">📊 Planilha de Metas por Categoria</div>
+        <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+            <button class="btn-manage-cat" onclick="adicionarCategoriaDoResumo('cartao')">➕ Cat. Cartão</button>
+            <button class="btn-manage-cat" onclick="adicionarCategoriaDoResumo('cash')">➕ Cat. Cash</button>
+        </div>
+        <div class="table-container meta-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="excel-header">categoria</th>
+                        <th class="excel-header">origem</th>
+                        <th class="excel-header">meta (R$)</th>
+                        <th class="excel-header">realizado</th>
+                        <th class="excel-header">diferença</th>
+                        <th class="excel-header">ação</th>
+                    </tr>
+                </thead>
+                <tbody id="body-resumo-excel-metas"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 5. PRESTAÇÕES -->
+    <div id="aba-prestacoes" class="tab-content">
+        <div class="controls" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+            <div class="flex-break-row">
+                <input type="text" id="p-nome" placeholder="Item / Contrato">
+                <input type="number" id="p-valor-total" step="0.01" placeholder="Valor Total (R$)">
+                <input type="number" id="p-parcelas" placeholder="Qtd Parc." style="width:90px;">
+                <select id="p-inicio-mes"></select>
+                <select id="p-inicio-ano">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+                <button class="btn-add" onclick="adicionarPrestacao()">Adicionar</button>
+            </div>
+            
+            <div class="flex-break-row" style="border-top: 1px dashed var(--border-color); padding-top: 0.6rem;">
+                <label>Filtrar por Mês:</label>
+                <select id="filtro-mes-prestacoes" onchange="renderPrestacoes()">
+                    <option value="TODOS">Ver Todos os Meses</option>
+                </select>
+
+                <label style="margin-left: 0.5rem;">Visualizar:</label>
+                <input type="number" id="qtde-meses-prestacoes" value="24" min="3" max="48" style="width:65px;" onchange="ajustarLinhaTempoPrestacoes(this.value)">
+                <label>meses</label>
+
+                <div id="badge-prestacoes-total" class="badge-meta-container badge-meta-blue" style="margin-left:auto; padding: 0.4rem 1rem;">
+                    <span id="label-prestacoes-total-dinamico">TOTAL ACUMULADO: R$ 0,0</span>
+                </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr id="header-prestacoes-meses"></tr></thead>
+                <tbody id="body-prestacoes"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 6. OUTROS -->
+    <div id="aba-outros" class="tab-content">
+        <div class="controls">
+            <input type="text" id="c-nome" placeholder="Nome da Pessoa">
+            <input type="text" id="c-desc" placeholder="Descrição do Gasto">
+            <input type="text" id="c-valor" placeholder="Valor (R$)">
+            <select id="c-mes"></select>
+            <label>Recorrência:</label>
+            <input type="number" id="c-parcelas" value="1" min="1" max="48" style="width:60px;" placeholder="Parc.">
+            <button class="btn-add" onclick="adicionarCartao()">Lançar</button>
+
+            <input type="text" id="filtro-outros-nome" placeholder="🔍 Filtrar..." class="input-filtro" style="margin-left:auto;" oninput="renderCartao()">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead id="thead-outros"></thead>
+                <tbody id="body-outros"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 7. RECEITAS -->
+    <div id="aba-receitas" class="tab-content">
+        <div class="controls">
+            <input type="text" id="rec-origem" placeholder="Nome da Empresa">
+            <button class="btn-add" onclick="adicionarOrigemReceita()">Adicionar Empresa</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="receitas-auto-width">Nome da Empresa</th>
+                        <th class="receitas-valores-width">JAN</th>
+                        <th class="receitas-valores-width">FEV</th>
+                        <th class="receitas-valores-width">MAR</th>
+                        <th class="receitas-valores-width">ABR</th>
+                        <th class="receitas-valores-width">MAI</th>
+                        <th class="receitas-valores-width">JUN</th>
+                        <th class="receitas-valores-width">JUL</th>
+                        <th class="receitas-valores-width">AGO</th>
+                        <th class="receitas-valores-width">SET</th>
+                        <th class="receitas-valores-width">OUT</th>
+                        <th class="receitas-valores-width">NOV</th>
+                        <th class="receitas-valores-width">DEZ</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="body-receitas"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    const mesesNum = { "JAN":0, "FEV":1, "MAR":2, "ABR":3, "MAI":4, "JUN":5, "JUL":6, "AGO":7, "SET":8, "OUT":9, "NOV":10, "DEZ":11 };
+    const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const semanas = ["S1", "S2", "S3", "S4", "S5"];
+    let chartG = null, chartP = null, chartB = null;
+
+    let excelFiltros = { nome: "", parcelas: "", inicio: "" };
+    let excelOrdenacao = { coluna: "", direcao: "" }; 
+    let outrosOrdenacao = { coluna: "", direcao: "" }; 
+
+    let linhaDoTempoPrestacoes = [];
+    function construirLinhaTempo(totalMeses) {
+        linhaDoTempoPrestacoes = [];
+        let anoStart = 2026; 
+        let mesStartIdx = 0; 
+        for(let i=0; i<totalMeses; i++) {
+            let mIdx = (mesStartIdx + i) % 12;
+            let anoReal = anoStart + Math.floor((mesStartIdx + i) / 12);
+            linhaDoTempoPrestacoes.push({ id: `${meses[mIdx]}_${anoReal}`, rotulo: `${meses[mIdx]}/${anoReal}`, mes: meses[mIdx], ano: anoReal });
+        }
+    }
+    construirLinhaTempo(24);
+
+    function ajustarLinhaTempoPrestacoes(valor) {
+        let n = parseInt(valor);
+        if(!isNaN(n) && n >= 3) {
+            construirLinhaTempo(n);
+            renderPrestacoes();
+        }
+    }
+
+    const DB_KEY = 'financas_domesticas_royal_v3';
+    let db = {};
+
+    function aplicarDefaults(obj) {
+        if (!obj.categorias_cartao) obj.categorias_cartao = ["Prestação", "Gasolina", "Mercado", "Farmácia", "Chopp", "Etc", "GBLCOM", "Lazer", "Uber", "Mirna", "Outros"];
+        if (!obj.categorias_cash) obj.categorias_cash = ["Prestação", "Gasolina", "Mercado", "Farmácia", "Chopp", "Etc", "GBLCOM", "Lazer", "Uber", "Mirna", "Outros"];
+        if (!obj.lancamentos_cartao) obj.lancamentos_cartao = {};
+        if (!obj.lancamentos_cash) obj.lancamentos_cash = {};
+        if (!obj.prestacoes) obj.prestacoes = [];
+        if (!obj.cartao) obj.cartao = [];
+        if (!obj.receitas) obj.receitas = {};
+        if (!obj.origensReceitas) obj.origensReceitas = [];
+        if (!obj.metas_por_categoria) obj.metas_por_categoria = {};
+        if (!obj.config_metas_badges) obj.config_metas_badges = { cartao: 1000.0, cash: 1000.0 };
+        return obj;
+    }
+
+    // ===== Supabase (sincroniza entre dispositivos) =====
+    const SUPABASE_URL = 'https://pxcqyzbgfbwwkazmonzx.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_6QT2f_wCkTmpfoO_EEZlpA_BCcC8Fv8';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUserId = null;
+
+    async function carregarDados() {
+        const { data, error } = await supabaseClient
+            .from('financas_dados')
+            .select('dados')
+            .eq('user_id', currentUserId)
+            .maybeSingle();
+        if (error) console.error('Erro ao carregar dados do Supabase:', error);
+        db = aplicarDefaults((data && data.dados) || {});
+    }
+
+    // Calcula a data real de um dia dentro de uma semana comercial.
+    // O mês comercial começa no dia 21 do mês calendário anterior ao mesRef.
+    // Ex: mês comercial JAN/2026 = 21/Dez/2025 até 20/Jan/2026.
+    // tamanhoSemana define quantos dias cada semana tem (ex: 8 -> S1=dias 0-7, S2=dias 8-15...).
+    function obterDataDoCicloPorSemana(mesRef, semanaRef, indexDiaNaSemana, anoRef, tamanhoSemana) {
+        let mesIdx = mesesNum[mesRef]; // 0=JAN, 11=DEZ
+        let numSemana = parseInt(semanaRef.replace("S", "")) || 1;
+        let tam = tamanhoSemana || 7;
+        // Deslocamento: cada semana começa exatamente após a anterior terminar.
+        let diaSequencialNoCiclo = ((numSemana - 1) * tam) + (indexDiaNaSemana - 1);
+
+        // Início do mês comercial = dia 21 do mês anterior no calendário.
+        let dataObjeto = new Date(anoRef, mesIdx - 1, 21);
+        dataObjeto.setDate(dataObjeto.getDate() + diaSequencialNoCiclo);
+        return dataObjeto;
+    }
+
+    let saveTimeout = null;
+    function save() {
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(salvarNoSupabase, 800);
+    }
+
+    async function salvarNoSupabase() {
+        if (!currentUserId) return;
+        const { error } = await supabaseClient
+            .from('financas_dados')
+            .upsert({ user_id: currentUserId, dados: db, updated_at: new Date().toISOString() });
+        if (error) console.error('Erro ao salvar no Supabase:', error);
+    }
+
+    function exportarBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `BACKUP_FINANCAS_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importarBackup(event) {
+        const input = event.target;
+        const reader = new FileReader();
+        reader.onload = function() {
+            try {
+                const parsed = JSON.parse(reader.result);
+                if (parsed.lancamentos_cartao || parsed.lancamentos_cash) {
+                    db = parsed; save(); alert("✅ Backup restaurado com sucesso!"); window.location.reload();
+                } else { alert("❌ Arquivo inválido."); }
+            } catch (e) { alert("❌ Erro ao ler backup."); }
+        };
+        if(input.files[0]) reader.readAsText(input.files[0]);
+    }
+
+    function fmt(num) {
+        if (num === 0 || !num) return "0,0";
+        let parts = num.toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    }
+
+    // Formata campos de até 8 decimais na aba receitas de forma limpa
+    function fmt8(num) {
+        if (num === 0 || !num) return "0,0";
+        let s = num.toString().replace('.', ',');
+        if(!s.includes(',')) return s + ",0";
+        return s;
+    }
+
+    function avaliarExpressao(strExpressao) {
+        if (!strExpressao || typeof strExpressao !== 'string') return 0;
+        let limpa = strExpressao.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.+\-*/()]/g, '');
+        if (!limpa) return 0;
+        try {
+            let resultado = Function(`return parseFloat(${limpa})`)();
+            return isNaN(resultado) ? 0 : resultado;
+        } catch(e) { return 0; }
+    }
+
+    function obterValorCalculado(tipo, chave) {
+        const dbRef = tipo === 'cartao' ? db.lancamentos_cartao : db.lancamentos_cash;
+        let dado = dbRef[chave];
+        if (Array.isArray(dado)) return dado.reduce((a, b) => a + b, 0);
+        if (typeof dado === 'string') return avaliarExpressao(dado);
+        return parseFloat(dado) || 0;
+    }
+
+    function obterFormulaOriginal(tipo, chave) {
+        const dbRef = tipo === 'cartao' ? db.lancamentos_cartao : db.lancamentos_cash;
+        let dado = dbRef[chave];
+        if (Array.isArray(dado)) return dado.join('+');
+        return dado || '';
+    }
+
+    ['cartao', 'cash', 'resumo'].forEach(tipo => {
+        const sel = document.getElementById(`select-mes-${tipo}`);
+        meses.forEach(m => {
+            let opt = document.createElement('option'); opt.value = m; opt.innerText = m; sel.appendChild(opt);
+        });
+        sel.value = meses[new Date().getMonth()];
+    });
+
+    // Popula selects de ano para lançamentos (cartão e cash)
+    const anoAtual = new Date().getFullYear();
+    ['cartao', 'cash'].forEach(tipo => {
+        const selAno = document.getElementById(`select-ano-${tipo}`);
+        for (let a = 2026; a <= anoAtual + 3; a++) {
+            let opt = document.createElement('option');
+            opt.value = a; opt.innerText = a;
+            selAno.appendChild(opt);
+        }
+        selAno.value = anoAtual >= 2026 ? anoAtual : 2026;
+    });
+
+    const pInicioMes = document.getElementById('p-inicio-mes');
+    const cMesOutros = document.getElementById('c-mes');
+    const fMesPrestacoes = document.getElementById('filtro-mes-prestacoes');
+
+    meses.forEach(m => {
+        let opt1 = document.createElement('option'); opt1.value = m; opt1.innerText = m; pInicioMes.appendChild(opt1);
+        let opt2 = document.createElement('option'); opt2.value = m; opt2.innerText = m; cMesOutros.appendChild(opt2);
+        let opt3 = document.createElement('option'); opt3.value = m; opt3.innerText = m; fMesPrestacoes.appendChild(opt3);
+    });
+    cMesOutros.value = meses[new Date().getMonth()];
+    pInicioMes.value = meses[new Date().getMonth()];
+
+    function switchTab(e, tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+
+        if(tabId === 'aba-lancamentos-cartao') renderLancamentos('cartao');
+        if(tabId === 'aba-lancamentos-cash') renderLancamentos('cash');
+        if(tabId === 'aba-resumo') renderResumo();
+        if(tabId === 'aba-prestacoes') renderPrestacoes();
+        if(tabId === 'aba-outros') renderCartao();
+        if(tabId === 'aba-receitas') renderReceitas();
+        if(tabId === 'aba-relatorios') renderDashboard();
+    }
+
+    function adicionarNovaCategoriaPrompt(tipo) {
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        let novaCat = prompt("Digite o nome da nova categoria:");
+        if (novaCat && novaCat.trim()) {
+            lista.push(novaCat.trim()); save(); renderLancamentos(tipo);
+        }
+    }
+
+    function removerCategoriaPrompt(tipo) {
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        let mensagem = "Escolha o número para remover:\n\n";
+        lista.forEach((cat, idx) => { mensagem += `${idx + 1} - ${cat}\n`; });
+        let escolha = prompt(mensagem);
+        if (escolha) {
+            let idxRemover = parseInt(escolha) - 1;
+            if (idxRemover >= 0 && idxRemover < lista.length) {
+                if (confirm(`Excluir a categoria "${lista[idxRemover]}"?`)) {
+                    lista.splice(idxRemover, 1); save(); renderLancamentos(tipo);
+                }
+            }
+        }
+    }
+
+    function atualizarNomeCategoria(tipo, idx, novoNome) {
+        if(!novoNome.trim()) return;
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        lista[idx] = novoNome.trim(); save();
+    }
+
+    function adicionarCategoriaDoResumo(tipo) {
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        let novaCat = prompt(`Nova categoria (${tipo === 'cartao' ? 'Cartão' : 'Cash'}):`);
+        if (novaCat && novaCat.trim()) {
+            lista.push(novaCat.trim()); save(); renderResumo();
+        }
+    }
+
+    function removerCategoriaDoResumo(tipo, idx) {
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        if (confirm(`Remover categoria "${lista[idx]}"? Os lançamentos vinculados a ela serão perdidos.`)) {
+            lista.splice(idx, 1); save(); renderResumo();
+        }
+    }
+
+    function atualizarMetaLocal(tipo, valorString) {
+        let n = parseFloat(valorString.replace(/\./g, '').replace(',', '.'));
+        if(!isNaN(n)) { db.config_metas_badges[tipo] = n; save(); atualizarBadgeGeral(tipo); }
+    }
+
+    function atualizarBadgeGeral(tipo) {
+        const mes = document.getElementById(`select-mes-${tipo}`).value;
+        const sem = document.getElementById(`select-semana-${tipo}`).value; 
+        const qtdDias = parseInt(document.getElementById(`qtde-dias-${tipo}`).value) || 7;
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        
+        let somaTotalSemana = 0;
+        lista.forEach((cat, idx) => {
+            for(let i=1; i<=qtdDias; i++) {
+                somaTotalSemana += obterValorCalculado(tipo, `${mes}_${sem}_${idx}_D${i}`);
+            }
+        });
+
+        document.getElementById(`total-val-${tipo}`).innerText = fmt(somaTotalSemana);
+        let inputMeta = document.getElementById(`meta-val-${tipo}`);
+        let metaDefinida = db.config_metas_badges[tipo] || 1000.0;
+        inputMeta.value = fmt(metaDefinida);
+
+        let somaMesInteiro = 0;
+        semanas.forEach(s => {
+            lista.forEach((cat, idx) => {
+                for(let i=1; i<=7; i++) { somaMesInteiro += obterValorCalculado(tipo, `${mes}_${s}_${idx}_D${i}`); }
+            });
+        });
+
+        let badgeElement = document.getElementById(`badge-${tipo}`);
+        badgeElement.className = somaMesInteiro > metaDefinida ? "badge-meta-container badge-meta-red" : "badge-meta-container badge-meta-blue";
+    }
+
+    function salvarGastoDireto(tipo, chave, valorString) {
+        const dbRef = tipo === 'cartao' ? db.lancamentos_cartao : db.lancamentos_cash;
+        let expressao = valorString.trim();
+        if (expressao === "" || expressao === "0" || expressao === "0,0") {
+            delete dbRef[chave];
+        } else { dbRef[chave] = expressao; }
+        save();
+        atualizarBadgeGeral(tipo);
+    }
+
+    function alternarVisualizacaoCelula(input, acao, tipo, chave) {
+        if (acao === 'foco') {
+            input.value = obterFormulaOriginal(tipo, chave);
+        } else if (acao === 'blur') {
+            salvarGastoDireto(tipo, chave, input.value);
+            let totalReal = obterValorCalculado(tipo, chave);
+            input.value = totalReal > 0 ? fmt(totalReal) : "";
+            
+            let tr = input.closest('tr');
+            if (tr) {
+                let totalLinha = 0;
+                tr.querySelectorAll('.excel-cell-direct').forEach(inp => {
+                    totalLinha += obterValorCalculado(tipo, inp.dataset.chave);
+                });
+                tr.querySelector('.total-linha-celula').innerText = fmt(totalLinha);
+            }
+        }
+    }
+
+    function renderLancamentos(tipo) {
+        const mes = document.getElementById(`select-mes-${tipo}`).value;
+        const ano = parseInt(document.getElementById(`select-ano-${tipo}`).value) || 2026;
+        const sem = document.getElementById(`select-semana-${tipo}`).value;
+        const qtdDias = parseInt(document.getElementById(`qtde-dias-${tipo}`).value) || 7;
+        const termoFiltro = document.getElementById(`filtro-categoria-${tipo}`).value.toLowerCase();
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+
+        let headerDias = document.getElementById(`header-dias-${tipo}`);
+        let headerSemana = document.getElementById(`header-semana-${tipo}`);
+
+        headerDias.innerHTML = `<th>Mês Comercial</th>`;
+        headerSemana.innerHTML = `<th class="sub-header-day">Dia da Semana</th>`;
+
+        for(let i=1; i<=qtdDias; i++) {
+            let dataObjeto = obterDataDoCicloPorSemana(mes, sem, i, ano, qtdDias);
+            let diaDoMesStr = String(dataObjeto.getDate()).padStart(2, '0');
+            let mesDoCicloStr = meses[dataObjeto.getMonth()];
+            let diaDaSemanaCalculado = diasSemanaNome[dataObjeto.getDay()];
+
+            headerDias.innerHTML += `<th class="header-day-automatic">${diaDoMesStr}/${mesDoCicloStr}</th>`;
+            headerSemana.innerHTML += `<th class="sub-header-day">${diaDaSemanaCalculado}</th>`;
+        }
+        
+        headerDias.innerHTML += `<th>TOTAL</th>`;
+        headerSemana.innerHTML += `<th class="sub-header-day">-</th>`;
+        
+        const body = document.getElementById(`body-lancamentos-${tipo}`); body.innerHTML = '';
+        
+        lista.forEach((cat, idx) => {
+            if(termoFiltro && !cat.toLowerCase().includes(termoFiltro)) return;
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-left" style="padding: 2px;"><input type="text" class="category-edit-input" value="${cat}" onchange="atualizarNomeCategoria('${tipo}', ${idx}, this.value); renderLancamentos('${tipo}');"></td>`;
+            let totalCatSemana = 0;
+            
+            for(let i=1; i<=qtdDias; i++) {
+                let chave = `${mes}_${sem}_${idx}_D${i}`;
+                let totalCel = obterValorCalculado(tipo, chave);
+                let formulaOriginal = obterFormulaOriginal(tipo, chave);
+                totalCatSemana += totalCel;
+                
+                let textoExibicao = totalCel > 0 ? fmt(totalCel) : "";
+                let textoTooltip = formulaOriginal.includes('+') ? `title="Valores somados: ${formulaOriginal}"` : "";
+
+                tr.innerHTML += `<td>
+                    <input type="text" 
+                           class="excel-cell-direct" 
+                           data-chave="${chave}"
+                           value="${textoExibicao}" 
+                           ${textoTooltip}
+                           onfocus="alternarVisualizacaoCelula(this, 'foco', '${tipo}', '${chave}')" 
+                           onblur="alternarVisualizacaoCelula(this, 'blur', '${tipo}', '${chave}')"
+                           onkeydown="if(event.key==='Enter') this.blur();">
+                </td>`;
+            }
+            tr.innerHTML += `<td class="total-linha-celula" style="font-weight:bold; color:var(--royal-dark); min-width: 90px;">${fmt(totalCatSemana)}</td>`;
+            body.appendChild(tr);
+        });
+
+        atualizarBadgeGeral(tipo);
+    }
+
+    function sumMesTipoCompleto(tipo, mes) {
+        let total = 0;
+        let lista = tipo === 'cartao' ? db.categorias_cartao : db.categorias_cash;
+        semanas.forEach(s => {
+            lista.forEach((cat, idx) => { 
+                for(let i=1; i<=7; i++) { total += obterValorCalculado(tipo, `${mes}_${s}_${idx}_D${i}`); } 
+            });
+        });
+        return total;
+    }
+
+    function sumMesCategoriaEspecifica(tipo, mes, catIdx) {
+        let total = 0;
+        semanas.forEach(s => {
+            for(let i=1; i<=7; i++) {
+                total += obterValorCalculado(tipo, `${mes}_${s}_${catIdx}_D${i}`);
+            }
+        });
+        return total;
+    }
+
+    function obterReceitaMes(mes) {
+        let total = 0; db.origensReceitas.forEach(rec => { total += db.receitas[`${mes}_${rec.id}`] || 0; }); return total;
+    }
+
+    function obterPrestacoesMes(mes, ano) {
+        let total = 0; db.prestacoes.forEach(p => { total += verificaPrestacaoNoMesContinuo(p, mes, ano); }); return total;
+    }
+
+    function obterOutrosMes(mes) {
+        let total = 0;
+        db.cartao.forEach(item => {
+            let mIdxStart = meses.indexOf(item.mes);
+            let mIdxAlvo = meses.indexOf(mes);
+            if (mIdxAlvo >= mIdxStart && mIdxAlvo < (mIdxStart + (item.parcelas || 1))) {
+                total += item.valor;
+            }
+        });
+        return total;
+    }
+
+    function verificaPrestacaoNoMesContinuo(p, mesAlvo, anoAlvo) {
+        let idxInicioGlobal = meses.indexOf(p.inicioMes) + (p.inicioAno * 12);
+        let idxAlvoGlobal = meses.indexOf(mesAlvo) + (anoAlvo * 12);
+        if(idxAlvoGlobal >= idxInicioGlobal && idxAlvoGlobal < (idxInicioGlobal + parseInt(p.parcelas))) return p.valor;
+        return 0;
+    }
+
+    function adicionarPrestacao() {
+        let inputNome = document.getElementById('p-nome');
+        let inputValorTotal = document.getElementById('p-valor-total');
+        let inputParcelas = document.getElementById('p-parcelas');
+        let inputMes = document.getElementById('p-inicio-mes');
+        let inputAno = document.getElementById('p-inicio-ano');
+
+        let nome = inputNome.value;
+        let valorTotal = parseFloat(inputValorTotal.value.replace(/\./g, '').replace(',', '.'));
+        let parcelas = parseInt(inputParcelas.value);
+        let inicioMes = inputMes.value;
+        let inicioAno = parseInt(inputAno.value);
+
+        if(nome && valorTotal && parcelas) { 
+            let valorParcela = valorTotal / parcelas;
+            db.prestacoes.push({ nome, valor: valorParcela, valorTotal, parcelas, inicioMes, inicioAno }); 
+            save(); 
+            inputNome.value = ''; inputValorTotal.value = ''; inputParcelas.value = '';
+            renderPrestacoes(); 
+        }
+    }
+
+    function salvarMetaCategoria(chaveMeta, valor) {
+        let n = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
+        db.metas_por_categoria[chaveMeta] = isNaN(n) ? 0 : n;
+        save();
+        renderResumo();
+    }
+
+    function renderResumo() {
+        const mesAnalise = document.getElementById('select-mes-resumo').value;
+        
+        // 1. Planilha Dinâmica de Metas por Categoria
+        const bodyMetas = document.getElementById('body-resumo-excel-metas');
+        bodyMetas.innerHTML = '';
+        
+        // Monta lista de linhas (Cartão)
+        db.categorias_cartao.forEach((cat, idx) => {
+            let chaveMeta = `${mesAnalise}_cartao_${idx}`;
+            let metaDefinida = db.metas_por_categoria[chaveMeta] || 0;
+            let real = sumMesCategoriaEspecifica('cartao', mesAnalise, idx);
+            let diff = metaDefinida - real;
+            let diffClass = diff >= 0 ? "excel-success-text" : "excel-danger-text";
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="excel-cell text-left" style="padding:2px 4px;">
+                    <input type="text" class="category-edit-input" value="${cat}" onchange="atualizarNomeCategoria('cartao', ${idx}, this.value); renderResumo();">
+                </td>
+                <td class="excel-cell" style="color:var(--royal-blue); font-weight:600;">CARTÃO</td>
+                <td class="excel-cell"><input type="text" class="excel-input" value="${fmt(metaDefinida)}" onchange="salvarMetaCategoria('${chaveMeta}', this.value)"></td>
+                <td class="excel-cell">R$ ${fmt(real)}</td>
+                <td class="excel-cell-diff ${diffClass}">R$ ${fmt(diff)}</td>
+                <td class="excel-cell"><button onclick="removerCategoriaDoResumo('cartao', ${idx})" style="background:var(--danger);color:white;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-weight:bold;">X</button></td>
+            `;
+            bodyMetas.appendChild(tr);
+        });
+
+        // Monta lista de linhas (Cash)
+        db.categorias_cash.forEach((cat, idx) => {
+            let chaveMeta = `${mesAnalise}_cash_${idx}`;
+            let metaDefinida = db.metas_por_categoria[chaveMeta] || 0;
+            let real = sumMesCategoriaEspecifica('cash', mesAnalise, idx);
+            let diff = metaDefinida - real;
+            let diffClass = diff >= 0 ? "excel-success-text" : "excel-danger-text";
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="excel-cell text-left" style="padding:2px 4px;">
+                    <input type="text" class="category-edit-input" value="${cat}" onchange="atualizarNomeCategoria('cash', ${idx}, this.value); renderResumo();">
+                </td>
+                <td class="excel-cell" style="color:var(--success); font-weight:600;">CASH</td>
+                <td class="excel-cell"><input type="text" class="excel-input" value="${fmt(metaDefinida)}" onchange="salvarMetaCategoria('${chaveMeta}', this.value)"></td>
+                <td class="excel-cell">R$ ${fmt(real)}</td>
+                <td class="excel-cell-diff ${diffClass}">R$ ${fmt(diff)}</td>
+                <td class="excel-cell"><button onclick="removerCategoriaDoResumo('cash', ${idx})" style="background:var(--danger);color:white;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-weight:bold;">X</button></td>
+            `;
+            bodyMetas.appendChild(tr);
+        });
+
+        // 2. Tabela de Despesas Mensais Comerciais com linha "Outros" e Linha de "Total"
+        const bodySemanas = document.getElementById('body-resumo-semanas');
+        bodySemanas.innerHTML = '';
+        let fluxosSemanas = ["Lançamentos Cartão", "Lançamentos Cash", "Prestações Fixas", "Outros (Cartão)"];
+        let totaisColunasDespesas = Array(12).fill(0);
+
+        fluxosSemanas.forEach(fluxo => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-left">${fluxo}</td>`;
+            meses.forEach((m, idxMes) => {
+                let v = 0;
+                if(fluxo === "Lançamentos Cartão") v = sumMesTipoCompleto('cartao', m);
+                if(fluxo === "Lançamentos Cash") v = sumMesTipoCompleto('cash', m);
+                if(fluxo === "Prestações Fixas") v = obterPrestacoesMes(m, 2026);
+                if(fluxo === "Outros (Cartão)") v = obterOutrosMes(m);
+                
+                totaisColunasDespesas[idxMes] += v;
+                tr.innerHTML += `<td>R$ ${fmt(v)}</td>`;
+            });
+            bodySemanas.appendChild(tr);
+        });
+
+        // Adiciona Linha de TOTAL nas Despesas
+        let trTotalDespesas = document.createElement('tr');
+        trTotalDespesas.className = "total-row";
+        trTotalDespesas.innerHTML = `<td class="resumo-title-column" style="color:var(--danger);">TOTAL DESPESAS</td>`;
+        totaisColunasDespesas.forEach(val => {
+            trTotalDespesas.innerHTML += `<td style="font-weight:800; color:var(--danger);">R$ ${fmt(val)}</td>`;
+        });
+        bodySemanas.appendChild(trTotalDespesas);
+
+        // 3. Tabela de Fluxo Consolidado Geral
+        const bodyFluxo = document.getElementById('body-resumo-fluxo');
+        bodyFluxo.innerHTML = '';
+        let fluxosGerais = ["Receita Bruta Total", "Despesa Operacional Total"];
+        
+        let totaisReceitasAnuais = meses.map(m => obterReceitaMes(m));
+        let totaisDespesasAnuais = totaisColunasDespesas; // Sincronizado dinamicamente
+
+        fluxosGerais.forEach(fg => {
+            let tr = document.createElement('tr');
+            let corEstilo = fg.includes("Receita") ? "color: var(--success); font-weight:bold;" : "color: var(--danger); font-weight:bold;";
+            tr.innerHTML = `<td class="text-left" style="${corEstilo}">${fg}</td>`;
+            
+            meses.forEach((m, i) => {
+                let val = fg.includes("Receita") ? totaisReceitasAnuais[i] : totaisDespesasAnuais[i];
+                tr.innerHTML += `<td style="${corEstilo}">R$ ${fmt(val)}</td>`;
+            });
+            bodyFluxo.appendChild(tr);
+        });
+
+        // 4. Tabela de Saldo Líquido
+        const bodySaldo = document.getElementById('body-resumo-saldo');
+        bodySaldo.innerHTML = '';
+        let trSaldo = document.createElement('tr');
+        trSaldo.className = "total-row";
+        trSaldo.innerHTML = `<td class="resumo-title-column">SALDO REAL</td>`;
+        
+        meses.forEach((m, i) => {
+            let saldo = totaisReceitasAnuais[i] - totaisDespesasAnuais[i];
+            let corSaldo = saldo >= 0 ? "color: var(--success);" : "color: var(--danger);";
+            trSaldo.innerHTML += `<td style="font-weight: 800; ${corSaldo}">R$ ${fmt(saldo)}</td>`;
+        });
+        bodySaldo.appendChild(trSaldo);
+    }
+
+    function toggleFiltroPopup(e, coluna) {
+        e.stopPropagation();
+        let pop = document.getElementById(`pop-${coluna}`);
+        if(pop) {
+            let visivel = pop.style.display === 'block';
+            document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
+            pop.style.display = visivel ? 'none' : 'block';
+            if(!visivel) { let inp = pop.querySelector('input'); if(inp) inp.focus(); }
+        }
+    }
+
+    function aplicarFiltroExcelColuna(coluna, valor) {
+        excelFiltros[coluna] = valor.trim().toLowerCase();
+        document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
+        renderPrestacoes();
+    }
+
+    function aplicarOrdenacaoExcel(coluna, direcao) {
+        excelOrdenacao.coluna = coluna; excelOrdenacao.direcao = direcao;
+        document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
+        renderPrestacoes();
+    }
+
+    function aplicarOrdenacaoOutros(coluna, direcao) {
+        outrosOrdenacao.coluna = coluna; outrosOrdenacao.direcao = direcao;
+        document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
+        renderCartao();
+    }
+
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
+    });
+
+    function renderPrestacoes() {
+        let filtroMes = document.getElementById('filtro-mes-prestacoes').value;
+        let header = document.getElementById('header-prestacoes-meses');
+        
+        let actNome = (excelFiltros.nome || excelOrdenacao.coluna === 'nome') ? "active" : "";
+        let actParc = (excelFiltros.parcelas || excelOrdenacao.coluna === 'parcelas') ? "active" : "";
+        let actIni = (excelFiltros.inicio || excelOrdenacao.coluna === 'inicio') ? "active" : "";
+
+        header.innerHTML = `
+            <th>Contrato <button class="btn-filter-excel ${actNome}" onclick="toggleFiltroPopup(event, 'nome')">🔽</button>
+                <div id="pop-nome" class="div-filtro-popup" onclick="event.stopPropagation()">
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('nome', 'ASC')">🔼 Classificar A-Z</button>
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('nome', 'DESC')">🔽 Classificar Z-A</button>
+                    <input type="text" placeholder="Filtrar..." value="${excelFiltros.nome}" onkeydown="if(event.key==='Enter') aplicarFiltroExcelColuna('nome', this.value)">
+                    <button onclick="aplicarFiltroExcelColuna('nome', this.previousElementSibling.value)">Filtrar</button>
+                </div>
+            </th>
+            <th>Qtd <button class="btn-filter-excel ${actParc}" onclick="toggleFiltroPopup(event, 'parcelas')">🔽</button>
+                <div id="pop-parcelas" class="div-filtro-popup" onclick="event.stopPropagation()">
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('parcelas', 'ASC')">🔼 Menor para Maior</button>
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('parcelas', 'DESC')">🔽 Maior para Menor</button>
+                    <input type="text" placeholder="Qtd..." value="${excelFiltros.parcelas}" onkeydown="if(event.key==='Enter') aplicarFiltroExcelColuna('parcelas', this.value)">
+                    <button onclick="aplicarFiltroExcelColuna('parcelas', this.previousElementSibling.value)">Filtrar</button>
+                </div>
+            </th>
+            <th>Início <button class="btn-filter-excel ${actIni}" onclick="toggleFiltroPopup(event, 'inicio')">🔽</button>
+                <div id="pop-inicio" class="div-filtro-popup" onclick="event.stopPropagation()">
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('inicio', 'ASC')">🔼 Antigos primeiro</button>
+                    <button class="sort-option" onclick="aplicarOrdenacaoExcel('inicio', 'DESC')">🔽 Novos primeiro</button>
+                    <input type="text" placeholder="Ex: JAN/2026" value="${excelFiltros.inicio}" onkeydown="if(event.key==='Enter') aplicarFiltroExcelColuna('inicio', this.value)">
+                    <button onclick="aplicarFiltroExcelColuna('inicio', this.previousElementSibling.value)">Filtrar</button>
+                </div>
+            </th>
+        `;
+        
+        linhaDoTempoPrestacoes.forEach(t => { header.innerHTML += `<th>${t.rotulo}</th>`; });
+        header.innerHTML += `<th>Ação</th>`;
+
+        const body = document.getElementById('body-prestacoes'); body.innerHTML = '';
+        let copiaPrestacoes = db.prestacoes.map((item, originalIndex) => ({ ...item, originalIndex }));
+
+        if (filtroMes !== "TODOS") {
+            copiaPrestacoes = copiaPrestacoes.filter(p => verificaPrestacaoNoMesContinuo(p, filtroMes, 2026) > 0);
+        }
+        if (excelFiltros.nome) copiaPrestacoes = copiaPrestacoes.filter(p => p.nome.toLowerCase().includes(excelFiltros.nome));
+        if (excelFiltros.parcelas) copiaPrestacoes = copiaPrestacoes.filter(p => String(p.parcelas) === excelFiltros.parcelas);
+        if (excelFiltros.inicio) copiaPrestacoes = copiaPrestacoes.filter(p => `${p.inicioMes}/${p.inicioAno}`.toLowerCase().includes(excelFiltros.inicio));
+
+        if (excelOrdenacao.coluna) {
+            let col = excelOrdenacao.coluna; let dir = excelOrdenacao.direcao;
+            copiaPrestacoes.sort((a, b) => {
+                let valA = a[col]; let valB = b[col];
+                if (col === 'inicio') {
+                    valA = (a.inicioAno * 12) + mesesNum[a.inicioMes];
+                    valB = (b.inicioAno * 12) + mesesNum[b.inicioMes];
+                }
+                if (typeof valA === 'string') return dir === 'ASC' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return dir === 'ASC' ? valA - valB : valB - valA;
+            });
+        }
+
+        let somaCalculoIndicatorSuperior = 0;
+        copiaPrestacoes.forEach((p) => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-left">${p.nome}</td><td>${p.parcelas}</td><td>${p.inicioMes}/${p.inicioAno}</td>`;
+            
+            linhaDoTempoPrestacoes.forEach(t => {
+                let v = verificaPrestacaoNoMesContinuo(p, t.mes, t.ano);
+                tr.innerHTML += `<td>${fmt(v)}</td>`;
+            });
+
+            let valContrato = parseFloat(p.valorTotal) || (parseFloat(p.valor) * parseInt(p.parcelas)) || 0;
+            somaCalculoIndicatorSuperior += valContrato;
+
+            tr.innerHTML += `<td><button onclick="db.prestacoes.splice(${p.originalIndex},1); save(); renderPrestacoes();" style="background-color: var(--danger); color: white; border:none; padding: 3px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Remover</button></td>`;
+            body.appendChild(tr);
+        });
+
+        let labelBadge = document.getElementById('label-prestacoes-total-dinamico');
+        labelBadge.innerText = `TOTAL ACUMULADO CONTRATOS: R$ ${fmt(somaCalculoIndicatorSuperior)}`;
+    }
+
+    function adicionarCartao() {
+        let inpNome = document.getElementById('c-nome');
+        let inpDesc = document.getElementById('c-desc');
+        let inpValor = document.getElementById('c-valor');
+        let inpMes = document.getElementById('c-mes');
+        let inpParc = document.getElementById('c-parcelas');
+
+        let nome = inpNome.value; let desc = inpDesc.value;
+        let valor = parseFloat(inpValor.value.replace(/\./g, '').replace(',', '.'));
+        let mes = inpMes.value; let parcelas = parseInt(inpParc.value) || 1;
+
+        if(nome && !isNaN(valor)) { 
+            db.cartao.push({nome, desc, valor, mes, parcelas, acertado: false}); save(); 
+            inpNome.value = ''; inpDesc.value = ''; inpValor.value = ''; inpParc.value = '1';
+            renderCartao(); 
+        } else { alert("Por favor, insira um valor numérico válido."); }
+    }
+    
+    function renderCartao() {
+        let thead = document.getElementById('thead-outros');
+        let actO_N = outrosOrdenacao.coluna === 'nome' ? "active" : "";
+        let actO_V = outrosOrdenacao.coluna === 'valor' ? "active" : "";
+
+        thead.innerHTML = `
+            <tr>
+                <th>Quem Usa <button class="btn-filter-excel ${actO_N}" onclick="toggleFiltroPopup(event, 'outros_nome')">🔽</button>
+                    <div id="pop-outros_nome" class="div-filtro-popup" onclick="event.stopPropagation()">
+                        <button class="sort-option" onclick="aplicarOrdenacaoOutros('nome', 'ASC')">🔼 Classificar A-Z</button>
+                        <button class="sort-option" onclick="aplicarOrdenacaoOutros('nome', 'DESC')">🔽 Classificar Z-A</button>
+                    </div>
+                </th>
+                <th>Descrição</th>
+                <th>Valor Individual <button class="btn-filter-excel ${actO_V}" onclick="toggleFiltroPopup(event, 'outros_valor')">🔽</button>
+                    <div id="pop-outros_valor" class="div-filtro-popup" onclick="event.stopPropagation()">
+                        <button class="sort-option" onclick="aplicarOrdenacaoOutros('valor', 'ASC')">🔼 Menor para Maior</button>
+                        <button class="sort-option" onclick="aplicarOrdenacaoOutros('valor', 'DESC')">🔽 Maior para Menor</button>
+                    </div>
+                </th>
+                <th>Parcelas / Fluxo</th>
+                <th>Mês Inicial</th>
+                <th>Acertado?</th>
+                <th>Ações</th>
+            </tr>
+        `;
+
+        const body = document.getElementById('body-outros'); body.innerHTML = '';
+        let filtroNome = document.getElementById('filtro-outros-nome').value.toLowerCase();
+        let copiaCartao = db.cartao.map((item, originalIndex) => ({ ...item, originalIndex }));
+
+        if(filtroNome) {
+            copiaCartao = copiaCartao.filter(item => item.nome.toLowerCase().includes(filtroNome) || item.desc.toLowerCase().includes(filtroNome));
+        }
+
+        if(outrosOrdenacao.coluna) {
+            let col = outrosOrdenacao.coluna; let dir = outrosOrdenacao.direcao;
+            copiaCartao.sort((a, b) => {
+                if(col === 'valor') return dir === 'ASC' ? a.valor - b.valor : b.valor - a.valor;
+                return dir === 'ASC' ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome);
+            });
+        }
+
+        let somaTotalVisivel = 0;
+        copiaCartao.forEach((item) => {
+            somaTotalVisivel += item.valor;
+            let exibicaoFluxo = item.parcelas && item.parcelas > 1 ? `Recorrente (${item.parcelas}m)` : "Único";
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${item.nome}</b></td>
+                <td>${item.desc}</td>
+                <td>R$ ${fmt(item.valor)}</td>
+                <td>${exibicaoFluxo}</td>
+                <td>${item.mes}</td>
+                <td class="${item.acertado ? 'status-success' : 'status-danger'}">${item.acertado ? 'Sim' : 'Pendente'}</td>
+                <td>
+                    <button class="btn-manage-cat" onclick="db.cartao[${item.originalIndex}].acertado = !db.cartao[${item.originalIndex}].acertado; save(); renderCartao();">Alternar Status</button>
+                    <button onclick="db.cartao.splice(${item.originalIndex},1); save(); renderCartao();" style="background-color: var(--danger); color: white; border:none; padding: 4px 8px; border-radius:4px; margin-left:5px; cursor:pointer; font-weight: bold;">X</button>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
+
+        let trTotal = document.createElement('tr');
+        trTotal.className = "total-row";
+        trTotal.innerHTML = `
+            <td class="resumo-title-column">TOTAL</td>
+            <td></td>
+            <td style="font-weight: 800; color: var(--royal-dark);">R$ ${fmt(somaTotalVisivel)}</td>
+            <td></td><td></td><td></td><td></td>
+        `;
+        body.appendChild(trTotal);
+    }
+
+    function adicionarOrigemReceita() {
+        let origem = document.getElementById('rec-origem').value;
+        if(origem) { 
+            let novoObj = { id: 'rec_' + Date.now() + '_' + Math.floor(Math.random() * 1000), nome: origem, cor: "" };
+            db.origensReceitas.push(novoObj); save(); renderReceitas(); 
+            document.getElementById('rec-origem').value = '';
+        }
+    }
+
+    function alternarCorEmpresa(id) {
+        let item = db.origensReceitas.find(r => r.id === id);
+        if(item) {
+            if(!item.cor) item.cor = "azul";
+            else if(item.cor === "azul") item.cor = "rosa";
+            else item.cor = "";
+            save(); renderReceitas();
+        }
+    }
+
+    function renderReceitas() {
+        const body = document.getElementById('body-receitas'); body.innerHTML = '';
+        let totaisMensais = Array(12).fill(0);
+        
+        db.origensReceitas.forEach((rec, recIdx) => {
+            let tr = document.createElement('tr');
+            let estiloFundo = "";
+            if(rec.cor === "azul") estiloFundo = "background-color: var(--empresa-azul);";
+            if(rec.cor === "rosa") estiloFundo = "background-color: var(--empresa-rosa);";
+
+            tr.innerHTML = `
+                <td style="${estiloFundo} padding: 4px 8px;">
+                    <div class="td-empresa-container">
+                        <input type="text" class="category-edit-input" value="${rec.nome}" onchange="db.origensReceitas[${recIdx}].nome=this.value; save();">
+                        <button class="btn-color-picker" title="Alternar Cor" onclick="alternarCorEmpresa('${rec.id}')">🎨</button>
+                    </div>
+                </td>
+            `;
+            
+            meses.forEach((mes, idx) => {
+                let chave = `${mes}_${rec.id}`; let val = db.receitas[chave] || 0; totaisMensais[idx] += val;
+                tr.innerHTML += `<td style="${estiloFundo}"><input type="text" class="cell-input-receitas" value="${fmt8(val)}" onchange="let n=parseFloat(this.value.replace(/\\./g, '').replace(',','.')); db.receitas['${chave}']=isNaN(n)?0:n; save(); renderReceitas();"></td>`;
+            });
+            tr.innerHTML += `<td style="${estiloFundo}"><button onclick="db.origensReceitas.splice(${recIdx},1); save(); renderReceitas();" style="background:var(--danger); color:white; border:none; padding:4px 6px; border-radius:4px; cursor:pointer;">X</button></td>`;
+            body.appendChild(tr);
+        });
+
+        let trTotal = document.createElement('tr'); trTotal.className = "total-row";
+        trTotal.innerHTML = `<td class="resumo-title-column" style="color:var(--success); background-color:var(--success-light)">TOTAL</td>`;
+        totaisMensais.forEach(val => { trTotal.innerHTML += `<td style="font-weight:800; background-color:var(--success-light)">${fmt(val)}</td>`; });
+        trTotal.innerHTML += `<td style="background-color:var(--success-light)">-</td>`;
+        body.appendChild(trTotal);
+    }
+
+    function renderDashboard() {
+        let uniaoCategorias = Array.from(new Set([...db.categorias_cartao, ...db.categorias_cash]));
+        let totaisCategorias = uniaoCategorias.map((cat) => {
+            let s = 0; let idxCartao = db.categorias_cartao.indexOf(cat); let idxCash = db.categorias_cash.indexOf(cat);
+            meses.forEach(m => { 
+                semanas.forEach(sM => {
+                    for(let i=1; i<=7; i++) { 
+                        if(idxCartao !== -1) s += obterValorCalculado('cartao', `${m}_${sM}_${idxCartao}_D${i}`);
+                        if(idxCash !== -1) s += obterValorCalculado('cash', `${m}_${sM}_${idxCash}_D${i}`);
+                    } 
+                });
+            }); 
+            return s;
+        });
+        
+        let receitasMensais = meses.map(m => obterReceitaMes(m));
+        let despesasMensaisTotais = meses.map(m => {
+            return sumMesTipoCompleto('cartao', m) + sumMesTipoCompleto('cash', m) + obterPrestacoesMes(m, 2026) + obterOutrosMes(m);
+        });
+        
+        let totaisPrestacoesLinha = []; 
+        const tabelaBody = document.getElementById('body-dash-tabela-prestacoes'); 
+        if(tabelaBody) tabelaBody.innerHTML = '';
+        
+        linhaDoTempoPrestacoes.forEach(t => {
+            let s = 0; db.prestacoes.forEach(p => { s += verificaPrestacaoNoMesContinuo(p, t.mes, t.ano); }); totaisPrestacoesLinha.push(s);
+            if(tabelaBody) { let tr = document.createElement('tr'); tr.innerHTML = `<td><b>${t.rotulo}</b></td><td>R$ ${fmt(s)}</td>`; tabelaBody.appendChild(tr); }
+        });
+
+        if (chartB) chartB.destroy(); if (chartG) chartG.destroy(); if (chartP) chartP.destroy();
+        let ctxB = document.getElementById('chartBalanco');
+        if(ctxB) {
+            chartB = new Chart(ctxB.getContext('2d'), {
+                type: 'bar',
+                data: { labels: meses, datasets: [{ label: 'Receitas (R$)', data: receitasMensais, backgroundColor: '#059669', borderRadius: 4 }, { label: 'Despesas Totais (R$)', data: despesasMensaisTotais, backgroundColor: '#dc2626', borderRadius: 4 }] },
+                options: { responsive: true }
+            });
+        }
+        let ctxG = document.getElementById('chartGastos');
+        if(ctxG) { chartG = new Chart(ctxG.getContext('2d'), { type: 'bar', data: { labels: uniaoCategorias, datasets: [{ label: 'Gastos Globais (R$)', data: totaisCategorias, backgroundColor: '#4169e1', borderRadius: 4 }] }, options: { responsive: true } }); }
+        let ctxP = document.getElementById('chartPrestacoes');
+        if(ctxP) { chartP = new Chart(ctxP.getContext('2d'), { type: 'line', data: { labels: linhaDoTempoPrestacoes.map(t => t.rotulo), datasets: [{ label: 'Evolução das Parcelas (R$)', data: totaisPrestacoesLinha, borderColor: '#4169e1', backgroundColor: 'transparent', tension: 0.2 }] }, options: { responsive: true } }); }
+    }
+
+    async function fazerLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const senha = document.getElementById('login-senha').value;
+        const btn = document.getElementById('login-btn');
+        const erroDiv = document.getElementById('login-erro');
+        erroDiv.textContent = '';
+        if (!email || !senha) { erroDiv.textContent = 'Preencha e-mail e senha.'; return; }
+
+        btn.disabled = true; btn.textContent = 'Entrando...';
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+        btn.disabled = false; btn.textContent = 'Entrar';
+
+        if (error) { erroDiv.textContent = 'E-mail ou senha incorretos.'; return; }
+        await iniciarApp(data.session.user.id);
+    }
+
+    async function fazerLogout() {
+        await supabaseClient.auth.signOut();
+        currentUserId = null;
+        document.getElementById('app-container').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-senha').value = '';
+    }
+
+    async function iniciarApp(userId) {
+        currentUserId = userId;
+        await carregarDados();
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+        renderDashboard();
+    }
+
+    async function verificarSessao() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data.session) {
+            await iniciarApp(data.session.user.id);
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    }
+
+    window.onload = verificarSessao;
+</script>
+</body>
+</html>
