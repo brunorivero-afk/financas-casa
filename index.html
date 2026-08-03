@@ -265,7 +265,7 @@
             </select>
 
             <label>Dias Exibidos:</label>
-            <input type="number" id="qtde-dias-cartao" value="7" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cartao')">
+            <input type="number" id="qtde-dias-cartao" value="8" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cartao')">
             
             <input type="text" id="filtro-categoria-cartao" placeholder="🔍 Filtrar Categoria..." class="input-filtro" oninput="renderLancamentos('cartao')">
 
@@ -308,7 +308,7 @@
             </select>
 
             <label>Dias Exibidos:</label>
-            <input type="number" id="qtde-dias-cash" value="7" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cash')">
+            <input type="number" id="qtde-dias-cash" value="8" min="1" max="14" style="width: 55px;" onchange="renderLancamentos('cash')">
             
             <input type="text" id="filtro-categoria-cash" placeholder="🔍 Filtrar Categoria..." class="input-filtro" oninput="renderLancamentos('cash')">
 
@@ -430,8 +430,11 @@
                 <input type="number" id="qtde-meses-prestacoes" value="24" min="3" max="48" style="width:65px;" onchange="ajustarLinhaTempoPrestacoes(this.value)">
                 <label>meses</label>
 
-                <div id="badge-prestacoes-total" class="badge-meta-container badge-meta-blue" style="margin-left:auto; padding: 0.4rem 1rem;">
-                    <span id="label-prestacoes-total-dinamico">TOTAL ACUMULADO: R$ 0,0</span>
+                <div class="badge-meta-container badge-meta-green" style="margin-left:auto; padding: 0.4rem 1rem;">
+                    <span id="label-prestacoes-total-mes">TOTAL MÊS: R$ 0,00</span>
+                </div>
+                <div id="badge-prestacoes-total" class="badge-meta-container badge-meta-blue" style="padding: 0.4rem 1rem;">
+                    <span id="label-prestacoes-total-dinamico">TOTAL GERAL: R$ 0,00</span>
                 </div>
             </div>
         </div>
@@ -1121,7 +1124,22 @@
         document.querySelectorAll('.div-filtro-popup').forEach(p => p.style.display='none');
     });
 
+    function limparPrestacoesEncerradas() {
+        let hoje = new Date();
+        let mesAtualIdx = hoje.getMonth(); // 0-based
+        let anoAtual = hoje.getFullYear();
+        let idxAtualGlobal = mesAtualIdx + (anoAtual * 12);
+        let antes = db.prestacoes.length;
+        db.prestacoes = db.prestacoes.filter(p => {
+            let idxInicio = meses.indexOf(p.inicioMes) + (p.inicioAno * 12);
+            let idxFim = idxInicio + parseInt(p.parcelas) - 1;
+            return idxFim >= idxAtualGlobal;
+        });
+        if (db.prestacoes.length < antes) save();
+    }
+
     function renderPrestacoes() {
+        limparPrestacoesEncerradas();
         let filtroMes = document.getElementById('filtro-mes-prestacoes').value;
         let header = document.getElementById('header-prestacoes-meses');
         
@@ -1182,25 +1200,32 @@
             });
         }
 
-        let somaCalculoIndicatorSuperior = 0;
+        let somaGeral = 0;
+        let somaMes = 0;
+
+        let mesFiltroRef = filtroMes !== "TODOS" ? linhaDoTempoPrestacoes.find(t => t.mes === filtroMes) : null;
+        let mesCalcMes = mesFiltroRef ? mesFiltroRef.mes : meses[new Date().getMonth()];
+        let anoCalcMes = mesFiltroRef ? mesFiltroRef.ano : new Date().getFullYear();
+
         copiaPrestacoes.forEach((p) => {
             let tr = document.createElement('tr');
             tr.innerHTML = `<td class="text-left">${p.nome}</td><td>${p.parcelas}</td><td>${p.inicioMes}/${p.inicioAno}</td>`;
-            
+
             linhaDoTempoPrestacoes.forEach(t => {
                 let v = verificaPrestacaoNoMesContinuo(p, t.mes, t.ano);
                 tr.innerHTML += `<td>${fmt(v)}</td>`;
             });
 
             let valContrato = parseFloat(p.valorTotal) || (parseFloat(p.valor) * parseInt(p.parcelas)) || 0;
-            somaCalculoIndicatorSuperior += valContrato;
+            somaGeral += valContrato;
+            somaMes += verificaPrestacaoNoMesContinuo(p, mesCalcMes, anoCalcMes);
 
             tr.innerHTML += `<td><button onclick="db.prestacoes.splice(${p.originalIndex},1); save(); renderPrestacoes();" style="background-color: var(--danger); color: white; border:none; padding: 3px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Remover</button></td>`;
             body.appendChild(tr);
         });
 
-        let labelBadge = document.getElementById('label-prestacoes-total-dinamico');
-        labelBadge.innerText = `TOTAL ACUMULADO CONTRATOS: R$ ${fmt(somaCalculoIndicatorSuperior)}`;
+        document.getElementById('label-prestacoes-total-mes').innerText = `TOTAL MÊS: R$ ${fmt(somaMes)}`;
+        document.getElementById('label-prestacoes-total-dinamico').innerText = `TOTAL GERAL: R$ ${fmt(somaGeral)}`;
     }
 
     function adicionarCartao() {
