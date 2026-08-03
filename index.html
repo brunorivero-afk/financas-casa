@@ -558,7 +558,27 @@
             .eq('user_id', currentUserId)
             .maybeSingle();
         if (error) console.error('Erro ao carregar dados do Supabase:', error);
-        db = aplicarDefaults((data && data.dados) || {});
+
+        if (data && data.dados && Object.keys(data.dados).length > 0) {
+            // Dados encontrados no Supabase com o novo ID
+            db = aplicarDefaults(data.dados);
+        } else {
+            // Fallback: tenta recuperar do localStorage (dados da época do login)
+            const local = localStorage.getItem(DB_KEY);
+            if (local) {
+                try {
+                    const parsed = JSON.parse(local);
+                    db = aplicarDefaults(parsed);
+                    // Migra para o Supabase com o novo ID
+                    await salvarNoSupabase();
+                    console.log('Dados migrados do localStorage para o Supabase.');
+                } catch(e) {
+                    db = aplicarDefaults({});
+                }
+            } else {
+                db = aplicarDefaults({});
+            }
+        }
     }
 
     // Calcula a data real de um dia dentro de uma semana comercial.
