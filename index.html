@@ -6,6 +6,7 @@
     <title>Finanças Domésticas Pro - Royal Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --bg-color: #f4f6fa;
@@ -151,6 +152,26 @@
 
         .flex-break-row { display: flex; width: 100%; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
 
+        /* GTD / Relatório */
+        .gtd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+        .gtd-card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; }
+        .gtd-card-title { font-size: 0.85rem; font-weight: 800; color: var(--royal-dark); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+        .btn-gtd { background: var(--royal-blue); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; margin-bottom: 0.4rem; }
+        .btn-gtd:hover { background: var(--royal-dark); }
+        .btn-gtd.success { background: var(--success); }
+        .lembrete-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0; border-bottom: 1px dashed var(--border-color); font-size: 0.8rem; }
+        .lembrete-row:last-child { border-bottom: none; }
+        .lembrete-dia { background: var(--royal-dark); color: white; font-weight: 800; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; min-width: 28px; text-align: center; }
+        .lembrete-nome { flex: 1; font-weight: 600; color: var(--text-main); }
+        .lembrete-valor { color: var(--danger); font-weight: 700; font-size: 0.78rem; }
+        .btn-lembrete-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.85rem; padding: 0 4px; }
+        .btn-lembrete-enviar { background: var(--royal-light); border: 1px solid var(--royal-blue); color: var(--royal-blue); font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; cursor: pointer; }
+        .btn-lembrete-enviar:hover { background: var(--royal-blue); color: white; }
+        .add-lembrete-form { display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap; }
+        .add-lembrete-form input { font-size: 0.78rem; padding: 0.3rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; }
+        .add-lembrete-form input[type="number"] { width: 55px; }
+        .add-lembrete-form input[type="text"] { flex: 1; min-width: 100px; }
+
     </style>
 </head>
 <body>
@@ -199,6 +220,29 @@
                         <tbody id="body-dash-tabela-prestacoes"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <div class="gtd-grid">
+            <!-- Relatório PDF + GTD -->
+            <div class="gtd-card">
+                <div class="gtd-card-title">📊 Relatório Mensal</div>
+                <button class="btn-gtd" onclick="gerarPDF()">📄 Gerar PDF do Mês Atual</button>
+                <button class="btn-gtd success" onclick="enviarRelatorioParaGTD()">📬 Enviar Aviso ao GTD</button>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Envia tarefa no GTD com link para o sistema financeiro.</div>
+            </div>
+
+            <!-- Lembretes Recorrentes -->
+            <div class="gtd-card">
+                <div class="gtd-card-title">🔔 Lembretes Recorrentes</div>
+                <div id="lista-lembretes"></div>
+                <div class="add-lembrete-form">
+                    <input type="number" id="lem-dia" placeholder="Dia" min="1" max="31">
+                    <input type="text" id="lem-nome" placeholder="Ex: Cartão Nubank">
+                    <input type="text" id="lem-valor" placeholder="R$ (opcional)">
+                    <button class="btn-gtd" style="width:auto; margin:0; padding:0.3rem 0.8rem;" onclick="adicionarLembrete()">➕</button>
+                </div>
+                <button class="btn-gtd" style="margin-top:0.6rem;" onclick="enviarTodosLembretesHoje()">📬 Enviar Vencimentos de Hoje ao GTD</button>
             </div>
         </div>
     </div>
@@ -1327,10 +1371,224 @@
         if(ctxP) { chartP = new Chart(ctxP.getContext('2d'), { type: 'line', data: { labels: linhaDoTempoPrestacoes.map(t => t.rotulo), datasets: [{ label: 'Evolução das Parcelas (R$)', data: totaisPrestacoesLinha, borderColor: '#4169e1', backgroundColor: 'transparent', tension: 0.2 }] }, options: { responsive: true } }); }
     }
 
+    // ── GTD ──────────────────────────────────────────────────────────────
+    const LINK_FINANCAS = 'https://brunorivero-afk.github.io/financas-casa/';
+
+    async function enviarParaGTD(titulo, nota, prazo, link) {
+        try {
+            const { error } = await supabaseClient
+                .from('gtd_inbox')
+                .insert({ title: titulo, person: 'Sistema Financeiro', due: prazo || '', note: nota || '', link: link || LINK_FINANCAS, status: 'pending' });
+            if (error) throw error;
+            return true;
+        } catch(e) {
+            alert('Erro ao enviar para o GTD: ' + e.message);
+            return false;
+        }
+    }
+
+    async function enviarRelatorioParaGTD() {
+        const mes = meses[new Date().getMonth()];
+        const ano = new Date().getFullYear();
+        const totalReceitas = obterReceitaMes(mes);
+        const totalDespesas = sumMesTipoCompleto('cartao', mes) + sumMesTipoCompleto('cash', mes) + obterPrestacoesMes(mes, ano) + obterOutrosMes(mes);
+        const saldo = totalReceitas - totalDespesas;
+        const saldoTexto = saldo >= 0 ? `✅ Saldo positivo: R$ ${fmt(saldo)}` : `⚠️ Saldo negativo: R$ ${fmt(saldo)}`;
+        const nota = `Receitas: R$ ${fmt(totalReceitas)} | Despesas: R$ ${fmt(totalDespesas)} | ${saldoTexto}`;
+        const ok = await enviarParaGTD(`📊 Relatório Financeiro ${mes}/${ano}`, nota, '', LINK_FINANCAS);
+        if (ok) alert(`✅ Aviso do relatório de ${mes}/${ano} enviado ao GTD!`);
+    }
+
+    // ── PDF ──────────────────────────────────────────────────────────────
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const mes = meses[new Date().getMonth()];
+        const ano = new Date().getFullYear();
+        const azul = [30, 58, 138];
+        const verde = [5, 150, 105];
+        const vermelho = [220, 38, 38];
+
+        // Cabeçalho
+        doc.setFillColor(...azul);
+        doc.rect(0, 0, 210, 28, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+        doc.text('Relatório Financeiro', 14, 12);
+        doc.setFontSize(12); doc.setFont('helvetica', 'normal');
+        doc.text(`${mes} / ${ano}  —  gerado em ${new Date().toLocaleDateString('pt-BR')}`, 14, 22);
+
+        let y = 38;
+        function secao(titulo) {
+            doc.setFillColor(239, 246, 255);
+            doc.rect(10, y - 4, 190, 8, 'F');
+            doc.setTextColor(...azul); doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+            doc.text(titulo, 14, y + 1); y += 10;
+            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        }
+        function linha(label, valor, cor) {
+            if (y > 270) { doc.addPage(); y = 20; }
+            if (cor) doc.setTextColor(...cor); else doc.setTextColor(30, 30, 30);
+            doc.text(label, 18, y);
+            doc.text(`R$ ${fmt(valor)}`, 170, y, { align: 'right' });
+            y += 6;
+        }
+
+        // Receitas
+        secao('RECEITAS');
+        let totalReceitas = 0;
+        db.origensReceitas.forEach(rec => {
+            let v = db.receitas[`${mes}_${rec.id}`] || 0;
+            if (v > 0) { linha(rec.nome, v); totalReceitas += v; }
+        });
+        doc.setFont('helvetica', 'bold');
+        linha('TOTAL RECEITAS', totalReceitas, verde); y += 2;
+
+        // Despesas Cartão
+        secao('DESPESAS — CARTÃO');
+        doc.setFont('helvetica', 'normal');
+        let totalCartao = 0;
+        db.categorias_cartao.forEach((cat, idx) => {
+            let v = sumMesCategoriaEspecifica('cartao', mes, idx);
+            if (v > 0) { linha(cat, v); totalCartao += v; }
+        });
+        doc.setFont('helvetica', 'bold');
+        linha('TOTAL CARTÃO', totalCartao, vermelho); y += 2;
+
+        // Despesas Cash
+        secao('DESPESAS — CASH');
+        doc.setFont('helvetica', 'normal');
+        let totalCash = 0;
+        db.categorias_cash.forEach((cat, idx) => {
+            let v = sumMesCategoriaEspecifica('cash', mes, idx);
+            if (v > 0) { linha(cat, v); totalCash += v; }
+        });
+        doc.setFont('helvetica', 'bold');
+        linha('TOTAL CASH', totalCash, vermelho); y += 2;
+
+        // Prestações e Outros
+        let totalPrest = obterPrestacoesMes(mes, ano);
+        let totalOutros = obterOutrosMes(mes);
+        if (totalPrest > 0 || totalOutros > 0) {
+            secao('OUTROS DÉBITOS');
+            doc.setFont('helvetica', 'normal');
+            if (totalPrest > 0) linha('Prestações Fixas', totalPrest);
+            if (totalOutros > 0) linha('Outros (Cartão)', totalOutros);
+        }
+
+        // Metas
+        secao('METAS POR CATEGORIA');
+        doc.setFont('helvetica', 'normal');
+        db.categorias_cartao.forEach((cat, idx) => {
+            let chave = `${mes}_cartao_${idx}`;
+            let meta = db.metas_por_categoria[chave] || 0;
+            if (meta > 0) {
+                let real = sumMesCategoriaEspecifica('cartao', mes, idx);
+                let ok = real <= meta;
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setTextColor(...(ok ? verde : vermelho));
+                doc.text(`${ok ? '✓' : '✗'} [Cartão] ${cat}: R$ ${fmt(real)} / meta R$ ${fmt(meta)}`, 18, y);
+                y += 6;
+            }
+        });
+        db.categorias_cash.forEach((cat, idx) => {
+            let chave = `${mes}_cash_${idx}`;
+            let meta = db.metas_por_categoria[chave] || 0;
+            if (meta > 0) {
+                let real = sumMesCategoriaEspecifica('cash', mes, idx);
+                let ok = real <= meta;
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setTextColor(...(ok ? verde : vermelho));
+                doc.text(`${ok ? '✓' : '✗'} [Cash] ${cat}: R$ ${fmt(real)} / meta R$ ${fmt(meta)}`, 18, y);
+                y += 6;
+            }
+        });
+
+        // Saldo Final
+        y += 4;
+        let totalDespesas = totalCartao + totalCash + totalPrest + totalOutros;
+        let saldo = totalReceitas - totalDespesas;
+        doc.setFillColor(...(saldo >= 0 ? verde : vermelho));
+        doc.rect(10, y - 5, 190, 12, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+        doc.text(`SALDO LÍQUIDO: R$ ${fmt(saldo)}`, 14, y + 3);
+
+        doc.save(`Relatorio_Financeiro_${mes}_${ano}.pdf`);
+    }
+
+    // ── LEMBRETES RECORRENTES ────────────────────────────────────────────
+    function renderLembretes() {
+        if (!db.lembretes_recorrentes) db.lembretes_recorrentes = [];
+        const lista = document.getElementById('lista-lembretes');
+        if (!lista) return;
+        if (db.lembretes_recorrentes.length === 0) {
+            lista.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:0.3rem 0;">Nenhum lembrete cadastrado.</div>';
+            return;
+        }
+        lista.innerHTML = [...db.lembretes_recorrentes]
+            .sort((a, b) => a.dia - b.dia)
+            .map((l, idx) => `
+                <div class="lembrete-row">
+                    <span class="lembrete-dia">${String(l.dia).padStart(2,'0')}</span>
+                    <span class="lembrete-nome">${l.nome}</span>
+                    ${l.valor ? `<span class="lembrete-valor">R$ ${l.valor}</span>` : ''}
+                    <button class="btn-lembrete-enviar" onclick="enviarLembreteManual(${idx})">→ GTD</button>
+                    <button class="btn-lembrete-remove" onclick="removerLembrete(${idx})">✕</button>
+                </div>
+            `).join('');
+    }
+
+    function adicionarLembrete() {
+        if (!db.lembretes_recorrentes) db.lembretes_recorrentes = [];
+        const dia = parseInt(document.getElementById('lem-dia').value);
+        const nome = document.getElementById('lem-nome').value.trim();
+        const valor = document.getElementById('lem-valor').value.trim();
+        if (!dia || !nome) return;
+        db.lembretes_recorrentes.push({ dia, nome, valor });
+        save(); renderLembretes();
+        document.getElementById('lem-dia').value = '';
+        document.getElementById('lem-nome').value = '';
+        document.getElementById('lem-valor').value = '';
+    }
+
+    function removerLembrete(idx) {
+        db.lembretes_recorrentes.splice(idx, 1);
+        save(); renderLembretes();
+    }
+
+    async function enviarLembreteManual(idx) {
+        const l = db.lembretes_recorrentes[idx];
+        const mes = meses[new Date().getMonth()];
+        const ano = new Date().getFullYear();
+        // Próxima ocorrência deste dia
+        const dataVenc = new Date(ano, new Date().getMonth(), l.dia);
+        if (dataVenc < new Date()) dataVenc.setMonth(dataVenc.getMonth() + 1);
+        const prazoStr = dataVenc.toISOString().slice(0, 10);
+        const titulo = `💳 Vencimento: ${l.nome}${l.valor ? ' — R$ ' + l.valor : ''}`;
+        const nota = `Lembrete recorrente — dia ${l.dia} de cada mês.`;
+        const ok = await enviarParaGTD(titulo, nota, prazoStr, LINK_FINANCAS);
+        if (ok) alert(`✅ "${l.nome}" enviado ao GTD!`);
+    }
+
+    async function enviarTodosLembretesHoje() {
+        if (!db.lembretes_recorrentes || db.lembretes_recorrentes.length === 0) {
+            alert('Nenhum lembrete cadastrado.'); return;
+        }
+        const hoje = new Date().getDate();
+        const vencendoHoje = db.lembretes_recorrentes.filter(l => l.dia === hoje);
+        if (vencendoHoje.length === 0) {
+            alert(`Nenhum vencimento hoje (dia ${hoje}).`); return;
+        }
+        for (let i = 0; i < vencendoHoje.length; i++) {
+            await enviarLembreteManual(db.lembretes_recorrentes.indexOf(vencendoHoje[i]));
+        }
+    }
+
     window.onload = async function() {
         currentUserId = 'financas_casa_principal';
         await carregarDados();
         renderDashboard();
+        renderLembretes();
     };
 </script>
 </body>

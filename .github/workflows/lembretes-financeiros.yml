@@ -1,0 +1,109 @@
+name: Lembretes Financeiros → GTD
+
+on:
+  schedule:
+    - cron: '0 12 21 * *'   # Dia 21 às 12h (relatório mensal)
+    - cron: '0 12 28 * *'   # Dia 28 às 12h (lembretes do dia)
+    - cron: '0 12 5  * *'   # Dia 05 às 12h (lembretes do dia)
+  workflow_dispatch:         # Permite rodar manualmente pelo GitHub
+
+jobs:
+  enviar-lembretes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar lembretes ao GTD via Supabase
+        env:
+          SUPABASE_URL: https://pxcqyzbgfbwwkazmonzx.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          DIA=$(date +%-d)
+          MES=$(date +%m)
+          ANO=$(date +%Y)
+          NOMES_MESES=("" "JAN" "FEV" "MAR" "ABR" "MAI" "JUN" "JUL" "AGO" "SET" "OUT" "NOV" "DEZ")
+          NOME_MES=${NOMES_MESES[$MES]}
+          HOJE=$(date +%Y-%m-%d)
+          LINK="https://brunorivero-afk.github.io/financas-casa/"
+
+          enviar() {
+            local TITULO="$1"
+            local NOTA="$2"
+            local PRAZO="$3"
+            curl -s -X POST "$SUPABASE_URL/rest/v1/gtd_inbox" \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"title\": \"$TITULO\", \"person\": \"Sistema Financeiro\", \"due\": \"$PRAZO\", \"note\": \"$NOTA\", \"link\": \"$LINK\", \"status\": \"pending\"}"
+            echo " → Enviado: $TITULO"
+          }
+
+          echo "Dia $DIA — enviando lembretes..."
+
+          # Dia 21: Relatório mensal
+          if [ "$DIA" = "21" ]; then
+            enviar \
+              "📊 Relatório Financeiro $NOME_MES/$ANO disponível" \
+              "Acesse o sistema financeiro para ver o relatório completo do mês: gastos, metas e saldo." \
+              "$HOJE"
+          fi
+
+          # Lê lembretes recorrentes do Supabase e envia os do dia atual
+          DADOS=$(curl -s "$SUPABASE_URL/rest/v1/financas_dados?select=dados&user_id=eq.financas_casa_principal" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+
+          # Extrai lembretes do JSON e filtra pelo dia de hoje
+          echo "$DADOS" | python3 - <<'PYEOF'
+          import json, os, sys, subprocess
+
+          dados_raw = sys.stdin.read()
+          # stdin foi consumido acima, vamos usar variável de ambiente
+          PYEOF
+
+          # Alternativa via Python inline
+          python3 << PYEOF
+          import json, subprocess, os
+
+          supabase_url = os.environ.get('SUPABASE_URL')
+          anon_key = os.environ.get('SUPABASE_ANON_KEY')
+          dia_hoje = int(os.popen('date +%-d').read().strip())
+          hoje_str = os.popen('date +%Y-%m-%d').read().strip()
+          link = "https://brunorivero-afk.github.io/financas-casa/"
+
+          import urllib.request
+          req = urllib.request.Request(
+              f"{supabase_url}/rest/v1/financas_dados?select=dados&user_id=eq.financas_casa_principal",
+              headers={"apikey": anon_key, "Authorization": f"Bearer {anon_key}"}
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  rows = json.loads(resp.read())
+          except Exception as e:
+              print(f"Erro ao buscar dados: {e}")
+              exit(0)
+
+          if not rows:
+              print("Sem dados no Supabase.")
+              exit(0)
+
+          db = rows[0].get('dados', {})
+          lembretes = db.get('lembretes_recorrentes', [])
+          hoje = [l for l in lembretes if int(l.get('dia', 0)) == dia_hoje]
+
+          for l in hoje:
+              nome = l.get('nome', '')
+              valor = l.get('valor', '')
+              titulo = f"💳 Vencimento: {nome}" + (f" — R$ {valor}" if valor else "")
+              nota = f"Lembrete recorrente — dia {dia_hoje} de cada mês."
+              body = json.dumps({"title": titulo, "person": "Sistema Financeiro", "due": hoje_str, "note": nota, "link": link, "status": "pending"})
+              req2 = urllib.request.Request(
+                  f"{supabase_url}/rest/v1/gtd_inbox",
+                  data=body.encode(),
+                  headers={"apikey": anon_key, "Authorization": f"Bearer {anon_key}", "Content-Type": "application/json"},
+                  method="POST"
+              )
+              try:
+                  urllib.request.urlopen(req2)
+                  print(f" → Enviado: {titulo}")
+              except Exception as e:
+                  print(f"Erro ao enviar {titulo}: {e}")
+          PYEOF
