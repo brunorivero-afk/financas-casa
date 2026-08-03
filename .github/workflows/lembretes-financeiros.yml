@@ -47,7 +47,7 @@ jobs:
           fi
 
           # Lê lembretes recorrentes do Supabase e envia os do dia atual
-          DADOS=$(curl -s "$SUPABASE_URL/rest/v1/financas_dados?select=dados&user_id=eq.financas_casa_principal" \
+          DADOS=$(curl -s "$SUPABASE_URL/rest/v1/financas_dados?select=dados&user_id=eq.833613bc-8111-4392-80f7-3884e4425642" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY")
 
@@ -71,7 +71,7 @@ jobs:
 
           import urllib.request
           req = urllib.request.Request(
-              f"{supabase_url}/rest/v1/financas_dados?select=dados&user_id=eq.financas_casa_principal",
+              f"{supabase_url}/rest/v1/financas_dados?select=dados&user_id=eq.833613bc-8111-4392-80f7-3884e4425642",
               headers={"apikey": anon_key, "Authorization": f"Bearer {anon_key}"}
           )
           try:
