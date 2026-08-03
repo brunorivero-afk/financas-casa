@@ -200,29 +200,6 @@
             <input type="file" id="input-import" style="display: none;" accept=".json" onchange="importarBackup(event)">
         </div>
 
-        <div class="charts-grid">
-            <div class="chart-box">
-                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Balanço Mensal: Receitas x Despesas Totais</h3>
-                <canvas id="chartBalanco"></canvas>
-            </div>
-            <div class="chart-box">
-                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Distribuição de Gastos Acumulados (Cartão + Cash)</h3>
-                <canvas id="chartGastos"></canvas>
-            </div>
-            <div class="chart-box" style="grid-column: span 2;">
-                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.25rem;">Linha do Tempo das Prestações</h3>
-                <canvas id="chartPrestacoes"></canvas>
-                <div class="dash-table-container">
-                    <table class="dash-table">
-                        <thead>
-                            <tr><th>Mês / Ano</th><th>Valor da Prestação Mensal</th></tr>
-                        </thead>
-                        <tbody id="body-dash-tabela-prestacoes"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
         <div class="gtd-grid">
             <!-- Relatório PDF + GTD -->
             <div class="gtd-card">
@@ -242,7 +219,31 @@
                     <input type="text" id="lem-valor" placeholder="R$ (opcional)">
                     <button class="btn-gtd" style="width:auto; margin:0; padding:0.3rem 0.8rem;" onclick="adicionarLembrete()">➕</button>
                 </div>
-                <button class="btn-gtd" style="margin-top:0.6rem;" onclick="enviarTodosLembretesHoje()">📬 Enviar Vencimentos de Hoje ao GTD</button>
+                <button class="btn-gtd" style="margin-top:0.4rem;" onclick="enviarTodosLembretesHoje()">📬 Enviar Vencimentos de Hoje ao GTD</button>
+                <button class="btn-gtd success" style="margin-top:0.4rem;" onclick="enviarTodosLembretes()">📬 Enviar Todos ao GTD</button>
+            </div>
+        </div>
+
+        <div class="charts-grid" style="margin-top:1rem;">
+            <div class="chart-box">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Balanço Mensal: Receitas x Despesas Totais</h3>
+                <canvas id="chartBalanco"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.5rem;">Distribuição de Gastos Acumulados (Cartão + Cash)</h3>
+                <canvas id="chartGastos"></canvas>
+            </div>
+            <div class="chart-box" style="grid-column: span 2;">
+                <h3 style="font-size:0.88rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.25rem;">Linha do Tempo das Prestações</h3>
+                <canvas id="chartPrestacoes"></canvas>
+                <div class="dash-table-container">
+                    <table class="dash-table">
+                        <thead>
+                            <tr><th>Mês / Ano</th><th>Valor da Prestação Mensal</th></tr>
+                        </thead>
+                        <tbody id="body-dash-tabela-prestacoes"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1568,6 +1569,17 @@
         const nota = `Lembrete recorrente — dia ${l.dia} de cada mês.`;
         const ok = await enviarParaGTD(titulo, nota, prazoStr, LINK_FINANCAS);
         if (ok) alert(`✅ "${l.nome}" enviado ao GTD!`);
+    }
+
+    async function enviarTodosLembretes() {
+        if (!db.lembretes_recorrentes || db.lembretes_recorrentes.length === 0) {
+            alert('Nenhum lembrete cadastrado.'); return;
+        }
+        if (!confirm(`Enviar todos os ${db.lembretes_recorrentes.length} lembretes ao GTD?`)) return;
+        for (let i = 0; i < db.lembretes_recorrentes.length; i++) {
+            await enviarLembreteManual(i);
+        }
+        alert('✅ Todos os lembretes enviados ao GTD!');
     }
 
     async function enviarTodosLembretesHoje() {
