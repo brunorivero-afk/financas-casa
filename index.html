@@ -280,6 +280,13 @@
                 <button class="btn-manage-cat remove" onclick="removerCategoriaPrompt('cartao')">❌ Remover</button>
             </div>
         </div>
+        <div id="total-mes-cartao-bar" style="display:none; background: var(--card-bg); border: 2px solid var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; display:flex; gap: 1.5rem; flex-wrap: wrap; font-weight: 600; font-size: 0.9rem;">
+            <span>📊 TOTAL CARTÃO DO MÊS:</span>
+            <span>Lançamentos: <strong id="tmc-lancamentos">R$ 0,00</strong></span>
+            <span>Prestações: <strong id="tmc-prestacoes">R$ 0,00</strong></span>
+            <span>Outros: <strong id="tmc-outros">R$ 0,00</strong></span>
+            <span style="margin-left: auto; color: var(--accent); font-size: 1rem;">TOTAL: <strong id="tmc-total">R$ 0,00</strong></span>
+        </div>
         <div class="table-container">
             <table>
                 <thead id="thead-cartao">
@@ -895,6 +902,17 @@
         });
 
         atualizarBadgeGeral(tipo);
+
+        if (tipo === 'cartao') {
+            let lancamentos = sumMesTipoCompleto('cartao', mes);
+            let prestacoes = obterPrestacoesMes(mes, ano);
+            let outros = obterOutrosMes(mes);
+            let total = lancamentos + prestacoes + outros;
+            document.getElementById('tmc-lancamentos').innerText = `R$ ${fmt(lancamentos)}`;
+            document.getElementById('tmc-prestacoes').innerText = `R$ ${fmt(prestacoes)}`;
+            document.getElementById('tmc-outros').innerText = `R$ ${fmt(outros)}`;
+            document.getElementById('tmc-total').innerText = `R$ ${fmt(total)}`;
+        }
     }
 
     function sumMesTipoCompleto(tipo, mes) {
