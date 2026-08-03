@@ -151,35 +151,13 @@
 
         .flex-break-row { display: flex; width: 100%; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
 
-        /* ===== TELA DE LOGIN ===== */
-        #login-screen { display: flex; min-height: 100vh; align-items: center; justify-content: center; background: var(--royal-dark); }
-        #login-card { background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); width: 100%; max-width: 340px; }
-        #login-card h1 { font-size: 1.2rem; color: var(--royal-dark); margin-bottom: 1.2rem; text-align: center; }
-        #login-card input { width: 100%; padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; }
-        #login-card button { width: 100%; padding: 0.65rem; background: var(--royal-blue); color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
-        #login-card button:hover { background: var(--royal-dark); }
-        #login-card button:disabled { opacity: 0.6; cursor: default; }
-        #login-erro { color: var(--danger); font-size: 0.8rem; margin-top: 0.6rem; text-align: center; min-height: 1em; }
-        #btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; cursor: pointer; margin-left: 0.6rem; }
-        #btn-logout:hover { background: rgba(255,255,255,0.15); color: #fff; }
     </style>
 </head>
 <body>
 
-<div id="login-screen">
-    <div id="login-card">
-        <h1>Finanças Domésticas — Login</h1>
-        <input type="email" id="login-email" placeholder="e-mail" autocomplete="username">
-        <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
-        <button id="login-btn" onclick="fazerLogin()">Entrar</button>
-        <div id="login-erro"></div>
-    </div>
-</div>
-
-<div class="container" id="app-container" style="display:none">
+<div class="container" id="app-container">
     <header>
         <h1>Controle Financeiro Doméstico</h1>
-        <button id="btn-logout" onclick="fazerLogout()">Sair</button>
     </header>
 
     <div class="tabs">
@@ -1349,49 +1327,11 @@
         if(ctxP) { chartP = new Chart(ctxP.getContext('2d'), { type: 'line', data: { labels: linhaDoTempoPrestacoes.map(t => t.rotulo), datasets: [{ label: 'Evolução das Parcelas (R$)', data: totaisPrestacoesLinha, borderColor: '#4169e1', backgroundColor: 'transparent', tension: 0.2 }] }, options: { responsive: true } }); }
     }
 
-    async function fazerLogin() {
-        const email = document.getElementById('login-email').value.trim();
-        const senha = document.getElementById('login-senha').value;
-        const btn = document.getElementById('login-btn');
-        const erroDiv = document.getElementById('login-erro');
-        erroDiv.textContent = '';
-        if (!email || !senha) { erroDiv.textContent = 'Preencha e-mail e senha.'; return; }
-
-        btn.disabled = true; btn.textContent = 'Entrando...';
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
-        btn.disabled = false; btn.textContent = 'Entrar';
-
-        if (error) { erroDiv.textContent = 'E-mail ou senha incorretos.'; return; }
-        await iniciarApp(data.session.user.id);
-    }
-
-    async function fazerLogout() {
-        await supabaseClient.auth.signOut();
-        currentUserId = null;
-        document.getElementById('app-container').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'flex';
-        document.getElementById('login-email').value = '';
-        document.getElementById('login-senha').value = '';
-    }
-
-    async function iniciarApp(userId) {
-        currentUserId = userId;
+    window.onload = async function() {
+        currentUserId = 'financas_casa_principal';
         await carregarDados();
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-container').style.display = 'block';
         renderDashboard();
-    }
-
-    async function verificarSessao() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (data.session) {
-            await iniciarApp(data.session.user.id);
-        } else {
-            document.getElementById('login-screen').style.display = 'flex';
-        }
-    }
-
-    window.onload = verificarSessao;
+    };
 </script>
 </body>
 </html>
