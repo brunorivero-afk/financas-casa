@@ -210,7 +210,7 @@
         <!-- Tabela Visão Geral 12 Meses -->
         <div style="margin-bottom:1rem;">
             <div style="font-size:0.85rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.4rem; letter-spacing:0.03em;">VISÃO GERAL — PRÓXIMOS 12 MESES</div>
-            <div class="table-container" style="max-height: 340px; overflow-y:auto;">
+            <div class="table-container">
                 <table id="tabela-visao-12m" style="font-size:0.78rem; min-width:900px;">
                     <thead id="thead-visao-12m"></thead>
                     <tbody id="tbody-visao-12m"></tbody>
@@ -569,6 +569,7 @@
         if (!obj.origensReceitas) obj.origensReceitas = [];
         if (!obj.metas_por_categoria) obj.metas_por_categoria = {};
         if (!obj.config_metas_badges) obj.config_metas_badges = { cartao: 1000.0, cash: 1000.0 };
+        if (!obj.outros_mensais) obj.outros_mensais = {};
         return obj;
     }
 
@@ -1441,12 +1442,23 @@
             let total = 0;
             (db.cartao || []).forEach(item => {
                 if (normNome(item.nome) !== nomeKey) return;
-                if (item.mensalFixo) { total += item.valor; return; }
+                if (item.mensalFixo) {
+                    let salvo = (db.outros_mensais[nomeKey] || {})[mes];
+                    total += salvo !== undefined ? salvo : item.valor;
+                    return;
+                }
                 let mStart = meses.indexOf(item.mes);
                 let mAlvo = meses.indexOf(mes);
                 if (mAlvo >= mStart && mAlvo < mStart + (item.parcelas || 1)) total += item.valor;
             });
             return total;
+        }
+
+        function salvarOutroMensal(nomeKey, mes, valor) {
+            if (!db.outros_mensais[nomeKey]) db.outros_mensais[nomeKey] = {};
+            db.outros_mensais[nomeKey][mes] = valor;
+            save();
+            renderVisao12Meses();
         }
 
         const fmtCell = (v) => v > 0 ? fmt(v) : '—';
@@ -1465,8 +1477,21 @@
         html += groupRow('Outros (Cartão)');
         let subtotaisOutros = new Array(12).fill(0);
         nomesOutros.forEach(([key, displayName]) => {
+            let isMensalFixo = (db.cartao || []).some(i => normNome(i.nome) === key && i.mensalFixo);
             let vals = cols.map((c, ci) => { let v = outrosPorNomeMes(key, c.mes); subtotaisOutros[ci] += v; return v; });
-            html += `<tr>${stickyL(displayName, '1.2rem')}${vals.map(v => td(v)).join('')}</tr>`;
+            if (isMensalFixo) {
+                let cells = vals.map((v, ci) => {
+                    let mes = cols[ci].mes;
+                    let display = v > 0 ? fmt(v) : '';
+                    return `<td style="padding:1px 2px;"><input type="text" value="${display}" placeholder="—"
+                        style="width:68px; text-align:right; border:1px solid var(--border); border-radius:4px; padding:2px 4px; font-size:0.78rem; background:var(--card-bg); color:inherit;"
+                        onblur="let n=parseFloat(this.value.replace(/\\./g,'').replace(',','.')); if(!isNaN(n)) salvarOutroMensal('${key}','${mes}',n);"
+                        onkeydown="if(event.key==='Enter') this.blur();"></td>`;
+                }).join('');
+                html += `<tr>${stickyL('📅 ' + displayName, '1.2rem')}${cells}</tr>`;
+            } else {
+                html += `<tr>${stickyL(displayName, '1.2rem')}${vals.map(v => td(v)).join('')}</tr>`;
+            }
         });
         html += `<tr style="font-weight:700; border-top:1px solid var(--border-strong);">${stickyL('Subtotal Outros')}${subtotaisOutros.map(v => td(v)).join('')}</tr>`;
 
