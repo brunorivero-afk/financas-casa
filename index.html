@@ -1227,6 +1227,7 @@
 
         let somaGeral = 0;
         let somaMes = 0;
+        let totaisPorColuna = new Array(linhaDoTempoPrestacoes.length).fill(0);
 
         let mesFiltroRef = filtroMes !== "TODOS" ? linhaDoTempoPrestacoes.find(t => t.mes === filtroMes) : null;
         let mesCalcMes = mesFiltroRef ? mesFiltroRef.mes : meses[new Date().getMonth()];
@@ -1236,8 +1237,9 @@
             let tr = document.createElement('tr');
             tr.innerHTML = `<td class="text-left">${p.nome}</td><td>${p.parcelas}</td><td>${p.inicioMes}/${p.inicioAno}</td>`;
 
-            linhaDoTempoPrestacoes.forEach(t => {
+            linhaDoTempoPrestacoes.forEach((t, colIdx) => {
                 let v = verificaPrestacaoNoMesContinuo(p, t.mes, t.ano);
+                totaisPorColuna[colIdx] += v;
                 tr.innerHTML += `<td>${fmt(v)}</td>`;
             });
 
@@ -1248,6 +1250,16 @@
             tr.innerHTML += `<td><button onclick="db.prestacoes.splice(${p.originalIndex},1); save(); renderPrestacoes();" style="background-color: var(--danger); color: white; border:none; padding: 3px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Remover</button></td>`;
             body.appendChild(tr);
         });
+
+        // Linha de totais por coluna de mês
+        let trTotal = document.createElement('tr');
+        trTotal.style.cssText = 'font-weight: bold; background: var(--royal-dark, #1a237e); color: white; position: sticky; bottom: 0;';
+        trTotal.innerHTML = `<td class="text-left" colspan="3">TOTAL / MÊS</td>`;
+        totaisPorColuna.forEach(v => {
+            trTotal.innerHTML += `<td style="color:white;">${v > 0 ? fmt(v) : '—'}</td>`;
+        });
+        trTotal.innerHTML += `<td></td>`;
+        body.appendChild(trTotal);
 
         document.getElementById('label-prestacoes-total-mes').innerText = `TOTAL MÊS: R$ ${fmt(somaMes)}`;
         document.getElementById('label-prestacoes-total-dinamico').innerText = `TOTAL GERAL: R$ ${fmt(somaGeral)}`;
