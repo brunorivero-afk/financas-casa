@@ -207,13 +207,23 @@
             <input type="file" id="input-import" style="display: none;" accept=".json" onchange="importarBackup(event)">
         </div>
 
+        <!-- Tabela Visão Geral 12 Meses -->
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.85rem; font-weight:800; color:var(--royal-dark); margin-bottom:0.4rem; letter-spacing:0.03em;">VISÃO GERAL — PRÓXIMOS 12 MESES</div>
+            <div class="table-container" style="max-height: 340px; overflow-y:auto;">
+                <table id="tabela-visao-12m" style="font-size:0.78rem; min-width:900px;">
+                    <thead id="thead-visao-12m"></thead>
+                    <tbody id="tbody-visao-12m"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="gtd-grid">
-            <!-- Relatório PDF + GTD -->
-            <div class="gtd-card">
-                <div class="gtd-card-title">📊 Relatório Mensal</div>
-                <button class="btn-gtd" onclick="gerarPDF()">📄 Gerar PDF do Mês Atual</button>
-                <button class="btn-gtd success" onclick="enviarRelatorioParaGTD()">📬 Enviar Aviso ao GTD</button>
-                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Envia tarefa no GTD com link para o sistema financeiro.</div>
+            <!-- Relatório PDF + GTD — compacto -->
+            <div class="gtd-card" style="padding:0.5rem 0.8rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <span style="font-weight:700; font-size:0.8rem; color:var(--royal-dark); white-space:nowrap;">📊 Relatório</span>
+                <button class="btn-gtd" style="margin:0; padding:0.3rem 0.8rem; font-size:0.78rem; width:auto;" onclick="gerarPDF()">📄 PDF</button>
+                <button class="btn-gtd success" style="margin:0; padding:0.3rem 0.8rem; font-size:0.78rem; width:auto;" onclick="enviarRelatorioParaGTD()">📬 GTD</button>
             </div>
 
             <!-- Lembretes Recorrentes -->
@@ -1410,7 +1420,104 @@
         body.appendChild(trTotal);
     }
 
+    function renderVisao12Meses() {
+        let hoje = new Date();
+        let mIdx = hoje.getMonth();
+        let anoBase = hoje.getFullYear();
+        let cols = [];
+        for (let i = 0; i < 12; i++) {
+            let mi = (mIdx + i) % 12;
+            let ano = anoBase + Math.floor((mIdx + i) / 12);
+            cols.push({ mes: meses[mi], ano, rotulo: `${meses[mi]}/${String(ano).slice(2)}` });
+        }
+
+        // Subcategorias Outros: nomes únicos em db.cartao
+        let nomesOutros = [...new Set((db.cartao || []).map(i => i.nome))];
+
+        function outrosPorNomeMes(nome, mes, ano) {
+            let total = 0;
+            (db.cartao || []).forEach(item => {
+                if (item.nome !== nome) return;
+                let mStart = meses.indexOf(item.mes) + ((item.inicioAno || ano) * 12);
+                let mAlvo = meses.indexOf(mes) + (ano * 12);
+                let parc = item.parcelas || 1;
+                if (mAlvo >= mStart && mAlvo < mStart + parc) total += item.valor;
+            });
+            return total;
+        }
+
+        // Cabeçalho
+        let thead = document.getElementById('thead-visao-12m');
+        thead.innerHTML = `<tr><th style="text-align:left; min-width:140px; position:sticky; left:0; background:var(--card-bg);">Categoria</th>${cols.map(c => `<th style="text-align:right; min-width:80px;">${c.rotulo}</th>`).join('')}</tr>`;
+
+        let tbody = document.getElementById('tbody-visao-12m');
+        tbody.innerHTML = '';
+
+        const cellStyle = (v) => `style="text-align:right; color:${v > 0 ? 'inherit' : 'var(--text-muted)'};"`;
+        const fmtCell = (v) => v > 0 ? fmt(v) : '—';
+        const stickyCell = `style="text-align:left; position:sticky; left:0; background:var(--card-bg); font-weight:600;"`;
+        const totalRowStyle = `style="background:var(--royal-dark,#1a237e); color:white; font-weight:bold;"`;
+        const groupStyle = `style="background:var(--surface-alt, #f0f4ff); font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;"`;
+
+        // Grupo Outros
+        let trGrpOutros = document.createElement('tr');
+        trGrpOutros.innerHTML = `<td colspan="${cols.length + 1}" ${groupStyle}>Outros (Cartão)</td>`;
+        tbody.appendChild(trGrpOutros);
+
+        let subtotaisOutros = new Array(12).fill(0);
+        nomesOutros.forEach(nome => {
+            let tr = document.createElement('tr');
+            let cells = cols.map((c, ci) => { let v = outrosPorNomeMes(nome, c.mes, c.ano); subtotaisOutros[ci] += v; return `<td ${cellStyle(v)}>${fmtCell(v)}</td>`; }).join('');
+            tr.innerHTML = `<td ${stickyCell} style="text-align:left; position:sticky; left:0; background:var(--card-bg); padding-left:1rem;">${nome}</td>${cells}`;
+            tbody.appendChild(tr);
+        });
+
+        // Subtotal Outros
+        let trSubOut = document.createElement('tr');
+        trSubOut.style.cssText = 'font-weight:700; border-top: 1px solid var(--border-strong);';
+        trSubOut.innerHTML = `<td ${stickyCell}>Subtotal Outros</td>${subtotaisOutros.map(v => `<td ${cellStyle(v)}>${fmtCell(v)}</td>`).join('')}`;
+        tbody.appendChild(trSubOut);
+
+        // Prestações
+        let trGrpPrec = document.createElement('tr');
+        trGrpPrec.innerHTML = `<td colspan="${cols.length + 1}" ${groupStyle}>Prestações</td>`;
+        tbody.appendChild(trGrpPrec);
+
+        let trPrec = document.createElement('tr');
+        trPrec.innerHTML = `<td ${stickyCell}>Prestações</td>${cols.map(c => { let v = obterPrestacoesMes(c.mes, c.ano); return `<td ${cellStyle(v)}>${fmtCell(v)}</td>`; }).join('')}`;
+        tbody.appendChild(trPrec);
+
+        // Cash
+        let trGrpCash = document.createElement('tr');
+        trGrpCash.innerHTML = `<td colspan="${cols.length + 1}" ${groupStyle}>Cash</td>`;
+        tbody.appendChild(trGrpCash);
+
+        let trCash = document.createElement('tr');
+        trCash.innerHTML = `<td ${stickyCell}>Custos Cash</td>${cols.map(c => { let v = sumMesTipoCompleto('cash', c.mes); return `<td ${cellStyle(v)}>${fmtCell(v)}</td>`; }).join('')}`;
+        tbody.appendChild(trCash);
+
+        // Cartão
+        let trGrpCart = document.createElement('tr');
+        trGrpCart.innerHTML = `<td colspan="${cols.length + 1}" ${groupStyle}>Cartão</td>`;
+        tbody.appendChild(trGrpCart);
+
+        let trCart = document.createElement('tr');
+        trCart.innerHTML = `<td ${stickyCell}>Custos Cartão</td>${cols.map(c => { let v = sumMesTipoCompleto('cartao', c.mes); return `<td ${cellStyle(v)}>${fmtCell(v)}</td>`; }).join('')}`;
+        tbody.appendChild(trCart);
+
+        // Total Geral
+        let trTot = document.createElement('tr');
+        trTot.setAttribute('style', 'background:var(--royal-dark,#1a237e); color:white; font-weight:bold;');
+        let totCells = cols.map((c, ci) => {
+            let v = subtotaisOutros[ci] + obterPrestacoesMes(c.mes, c.ano) + sumMesTipoCompleto('cash', c.mes) + sumMesTipoCompleto('cartao', c.mes);
+            return `<td style="text-align:right; color:white;">${fmtCell(v)}</td>`;
+        }).join('');
+        trTot.innerHTML = `<td style="text-align:left; position:sticky; left:0; background:var(--royal-dark,#1a237e); color:white; font-weight:bold;">TOTAL GERAL</td>${totCells}`;
+        tbody.appendChild(trTot);
+    }
+
     function renderDashboard() {
+        renderVisao12Meses();
         let uniaoCategorias = Array.from(new Set([...db.categorias_cartao, ...db.categorias_cash]));
         let totaisCategorias = uniaoCategorias.map((cat) => {
             let s = 0; let idxCartao = db.categorias_cartao.indexOf(cat); let idxCash = db.categorias_cash.indexOf(cat);
