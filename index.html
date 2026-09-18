@@ -1339,7 +1339,7 @@
         let somaTotalVisivel = 0;
         copiaCartao.forEach((item) => {
             somaTotalVisivel += item.valor;
-            let exibicaoFluxo = item.parcelas && item.parcelas > 1 ? `Recorrente (${item.parcelas}m)` : "Único";
+            let exibicaoFluxo = item.mensalFixo ? `📅 Mensal Fixo` : (item.parcelas && item.parcelas > 1 ? `Recorrente (${item.parcelas}m)` : "Único");
             let tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><b>${item.nome}</b></td>
@@ -1349,7 +1349,8 @@
                 <td>${item.mes}</td>
                 <td class="${item.acertado ? 'status-success' : 'status-danger'}">${item.acertado ? 'Sim' : 'Pendente'}</td>
                 <td>
-                    <button class="btn-manage-cat" onclick="db.cartao[${item.originalIndex}].acertado = !db.cartao[${item.originalIndex}].acertado; save(); renderCartao();">Alternar Status</button>
+                    <button class="btn-manage-cat ${item.mensalFixo ? 'active' : ''}" title="Marcar como custo fixo mensal (aparece em todos os meses)" onclick="db.cartao[${item.originalIndex}].mensalFixo = !db.cartao[${item.originalIndex}].mensalFixo; save(); renderCartao();">${item.mensalFixo ? '📅 Fixo' : '📅'}</button>
+                    <button class="btn-manage-cat" onclick="db.cartao[${item.originalIndex}].acertado = !db.cartao[${item.originalIndex}].acertado; save(); renderCartao();">Acertado</button>
                     <button onclick="db.cartao.splice(${item.originalIndex},1); save(); renderCartao();" style="background-color: var(--danger); color: white; border:none; padding: 4px 8px; border-radius:4px; margin-left:5px; cursor:pointer; font-weight: bold;">X</button>
                 </td>
             `;
@@ -1440,6 +1441,7 @@
             let total = 0;
             (db.cartao || []).forEach(item => {
                 if (normNome(item.nome) !== nomeKey) return;
+                if (item.mensalFixo) { total += item.valor; return; }
                 let mStart = meses.indexOf(item.mes);
                 let mAlvo = meses.indexOf(mes);
                 if (mAlvo >= mStart && mAlvo < mStart + (item.parcelas || 1)) total += item.valor;
