@@ -1484,7 +1484,7 @@
                     let mes = cols[ci].mes;
                     let display = v > 0 ? fmt(v) : '';
                     return `<td style="padding:0;"><input type="text" value="${display}" placeholder="—"
-                        style="width:100%; text-align:right; border:none; border-bottom:1px solid var(--border); border-radius:0; padding:4px 6px; font-size:0.78rem; background:transparent; color:inherit; box-sizing:border-box;"
+                        style="width:100%; text-align:center; border:none; border-bottom:1px solid var(--border); border-radius:0; padding:4px 6px; font-size:0.78rem; background:transparent; color:inherit; box-sizing:border-box;"
                         onblur="let n=parseFloat(this.value.replace(/\\./g,'').replace(',','.')); if(!isNaN(n)) salvarOutroMensal('${key}','${mes}',n);"
                         onkeydown="if(event.key==='Enter') this.blur();"></td>`;
                 }).join('');
